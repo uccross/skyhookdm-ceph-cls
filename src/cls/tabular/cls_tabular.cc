@@ -79,8 +79,27 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     // seems to be an int32 currently.
     const int ceph_bl_encoding_len = sizeof(int32_t);
 
+<<<<<<< HEAD
     // TODO: get curr seq_num from stable counter (xattr)
     int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
+=======
+    bufferlist fb_bl2;
+    int fb_seq_num;
+    int r1 = cls_cxx_getxattr(hctx, "fb_seq_num", &fb_bl2);
+    if (r1 == -ENOENT || r1 == -ENODATA) {
+        fb_seq_num = 0;  // TODO: get this from a stable counter.
+        // If fb_seq_num is not present then insert it in xattr. 
+    }
+    else if( r1 < 0 ) {
+        return r1;
+    }
+    else {
+        bufferlist::iterator it = fb_bl2.begin();
+        ::decode(fb_seq_num,it);
+        CLS_LOG(20,"Read from xattr %d", fb_seq_num);
+    }
+    
+>>>>>>> changes to store fb_seq_num in xattr
 
     std::string key_prefix;
     std::string key_data;
@@ -348,6 +367,13 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
             return ret;
         }
     }
+
+    // Update counter and Insert fb_seq_num to xattr
+    fb_seq_num +=1;
+    ::encode(fb_seq_num, fb_bl2);
+    int r = cls_cxx_setxattr(hctx, "fb_seq_num", &fb_bl2);
+    if( r < 0 )
+        return r;
     return 0;
 }
 
