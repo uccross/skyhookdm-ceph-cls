@@ -56,17 +56,22 @@ static std::string string_ncopy(const char* buffer, std::size_t buffer_size) {
   return std::string(buffer, copyupto);
 }
 
-// Get fb_seq_num from xattr
+// Get fb_seq_num from xattr, if not present set to min val
 static
+<<<<<<< HEAD
 int get_fb_seq_num(cls_method_context_t hctx, int& fb_seq_num) {
     
+=======
+int get_fb_seq_num(cls_method_context_t hctx, unsigned int& fb_seq_num) {
+
+>>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
     bufferlist fb_bl;
     int ret = cls_cxx_getxattr(hctx, "fb_seq_num", &fb_bl);
     if (ret == -ENOENT || ret == -ENODATA) {
         fb_seq_num = Tables::FB_SEQ_NUM_MIN;
         // If fb_seq_num is not present then insert it in xattr. 
     }
-    else if( ret < 0 ) {
+    else if (ret < 0) {
         return ret;
     }
     else {
@@ -82,9 +87,9 @@ int get_fb_seq_num(cls_method_context_t hctx, int& fb_seq_num) {
 
 }
 
-// Update counter and Insert fb_seq_num to xattr
+// Insert fb_seq_num to xattr
 static
-int set_fb_seq_num(cls_method_context_t hctx, int fb_seq_num) {
+int set_fb_seq_num(cls_method_context_t hctx, unsigned int fb_seq_num) {
 
     bufferlist fb_bl;
     ::encode(fb_seq_num, fb_bl);
@@ -93,7 +98,12 @@ int set_fb_seq_num(cls_method_context_t hctx, int fb_seq_num) {
         return ret;
     }
     return 0;
+<<<<<<< HEAD
 } 
+=======
+}
+
+>>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
 /*
  * Build a skyhook index, insert to omap.
  * Index types are
@@ -120,6 +130,7 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     // TODO: get curr seq_num from stable counter (xattr)
     int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
 =======
@@ -133,8 +144,13 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         return r1;
 =======
     int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
+=======
+    // fb_seq_num is stored in xattrs and used as a stable counter of the
+    // current number of fbs in the object.
+    unsigned int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
+>>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
     int ret = get_fb_seq_num(hctx, fb_seq_num);
-    if( ret < 0) {
+    if (ret < 0) {
         CLS_ERR("error getting fb_seq_num entry from xattr %d", ret);
         return ret;
 >>>>>>> Review comments incorporated
@@ -199,6 +215,7 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         // DATA LOCATION INDEX (PHYSICAL data reference):
 
         // IDX_FB get the key prefix and key_data (fb sequence num)
+        ++fb_seq_num;
         key_prefix = buildKeyPrefix(Tables::SIT_IDX_FB, root.schema_name,
                                     root.table_name);
         std::string str_seq_num = Tables::u64tostr(fb_seq_num); // key data
@@ -214,7 +231,6 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         ::encode(fb_ent, fb_bl);
         key = key_prefix + key_data;
         fbs_index[key] = fb_bl;
-        fb_seq_num++;
         //CLS_LOG(20,"key=%s",(key+";"+fb_ent.toString()).c_str());
 
         // DATA CONTENT INDEXES (LOGICAL data reference):
@@ -417,9 +433,7 @@ int build_sky_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         }
     }
 
-
     // Update counter and Insert fb_seq_num to xattr
-    ++fb_seq_num;
     ret = set_fb_seq_num(hctx, fb_seq_num);
     if(ret < 0) {
         CLS_ERR("error setting fb_seq_num entry to xattr %d", ret);
@@ -638,9 +652,13 @@ read_fbs_index(
     using namespace Tables;
     int ret = 0;
 
-    // TODO: get curr MAX from stable counter (xattr)
-    unsigned int seq_max = Tables::FB_SEQ_NUM_MAX;
     unsigned int seq_min = Tables::FB_SEQ_NUM_MIN;
+    unsigned int seq_max = Tables::FB_SEQ_NUM_MIN;
+    ret = get_fb_seq_num(hctx, seq_max);
+    if (ret < 0) {
+        CLS_ERR("error getting fb_seq_num entry from xattr %d", ret);
+        return ret;
+    }
 
     // prefix is same for all fb index keys.
     std::string key_prefix = buildKeyPrefix(Tables::SIT_IDX_FB,
@@ -648,7 +666,7 @@ read_fbs_index(
                                             table);
 
     // fb seq num grow monotically, so try to read each key
-    for (unsigned int i = seq_min; i < seq_max; i++) {
+    for (unsigned int i = seq_min; i <= seq_max; i++) {
 
         // create key for this seq num.
         std::string key_data = Tables::buildKeyData(Tables::SDT_INT32, i);
