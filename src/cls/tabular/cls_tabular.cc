@@ -29,6 +29,7 @@ cls_method_handle_t h_exec_query_op;
 cls_method_handle_t h_exec_runstats_op;
 cls_method_handle_t h_build_index;
 cls_method_handle_t h_exec_build_sky_index_op;
+cls_method_handle_t h_transform_db_op;
 
 
 void cls_log_message(std::string msg, bool is_err = false, int log_level = 20) {
@@ -1678,7 +1679,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
   return 0;
 }
 
-
 static
 int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 {
@@ -1706,6 +1706,14 @@ int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     return 0;
 }
 
+static
+int transform_db_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
+{
+    CLS_LOG(20, "Called transform_db_op!! ");
+    return 0;
+}
+
+
 void __cls_init()
 {
   CLS_LOG(20, "Loaded tabular class!");
@@ -1723,5 +1731,10 @@ void __cls_init()
 
   cls_register_cxx_method(h_class, "exec_build_sky_index_op",
       CLS_METHOD_RD | CLS_METHOD_WR, exec_build_sky_index_op, &h_exec_build_sky_index_op);
+
+  cls_register_cxx_method(h_class, "transform_db_op",
+      CLS_METHOD_RD | CLS_METHOD_WR, transform_db_op, &h_transform_db_op);
+
+
 }
 
