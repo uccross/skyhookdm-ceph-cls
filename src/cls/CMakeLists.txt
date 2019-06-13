@@ -271,7 +271,11 @@ endif()
 
 # skyhookdb cls_tabular
 add_library(cls_tabular SHARED tabular/cls_tabular.cc tabular/cls_tabular_utils.cc)
+<<<<<<< HEAD
 target_link_libraries(cls_tabular re2 arrow)
+=======
+target_link_libraries(cls_tabular re2 Boost::date_time)
+>>>>>>> Update CMakeLists.txt
 set_target_properties(cls_tabular PROPERTIES VERSION "1.0.0" SOVERSION "1")
 install(TARGETS cls_tabular DESTINATION ${cls_dir})
 
