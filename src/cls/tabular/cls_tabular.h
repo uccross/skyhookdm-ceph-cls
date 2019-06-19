@@ -21,6 +21,7 @@
 
 void cls_log_message(std::string msg, bool is_err, int log_level);
 
+<<<<<<< HEAD
 #define STREAM_CAPACITY 1024
 #define ARROW_RID_INDEX(cols) (cols)
 #define ARROW_DELVEC_INDEX(cols) (cols + 1)
@@ -54,6 +55,18 @@ inline const char* ToString(arrow_metadata_t m)
     }
 }
 
+=======
+// refers to data format stored in objects
+enum SkyFormatType {
+    SFT_FLATBUF_FLEX_ROW,
+    SFT_FLATBUF_UNION_ROW,
+    SFT_FLATBUF_UNION_COL,
+    SFT_ARROW,
+    SFT_POSTGRESQL,
+    SFT_CSV
+};
+
+>>>>>>> Added enum for data formats supported, added char and uchar case to regex for string types, updated root_table field names.
 /*
  * Stores the query request parameters.  This is encoded by the client and
  * decoded by server (osd node) for query processing.
