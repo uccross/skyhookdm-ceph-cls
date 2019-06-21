@@ -69,8 +69,13 @@ int get_fb_seq_num(cls_method_context_t hctx, unsigned int& fb_seq_num) {
     bufferlist fb_bl;
     int ret = cls_cxx_getxattr(hctx, "fb_seq_num", &fb_bl);
     if (ret == -ENOENT || ret == -ENODATA) {
+<<<<<<< HEAD
         fb_seq_num = Tables::FB_SEQ_NUM_MIN;
         // If fb_seq_num is not present then insert it in xattr. 
+=======
+        fb_seq_num = Tables::DATASTRUCT_SEQ_NUM_MIN;
+        // If fb_seq_num is not present then insert it in xattr.
+>>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
     }
     else if (ret < 0) {
         return ret;
@@ -190,8 +195,12 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
 =======
     // fb_seq_num is stored in xattrs and used as a stable counter of the
     // current number of fbs in the object.
+<<<<<<< HEAD
     unsigned int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
 >>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
+=======
+    unsigned int fb_seq_num = Tables::DATASTRUCT_SEQ_NUM_MIN;
+>>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
     int ret = get_fb_seq_num(hctx, fb_seq_num);
     if (ret < 0) {
         CLS_ERR("ERROR: exec_build_sky_index_op: fb_seq_num entry from xattr %d", ret);
@@ -674,8 +683,8 @@ read_fbs_index(
     using namespace Tables;
     int ret = 0;
 
-    unsigned int seq_min = Tables::FB_SEQ_NUM_MIN;
-    unsigned int seq_max = Tables::FB_SEQ_NUM_MIN;
+    unsigned int seq_min = Tables::DATASTRUCT_SEQ_NUM_MIN;
+    unsigned int seq_max = Tables::DATASTRUCT_SEQ_NUM_MIN;
 
     // get the actual max fb seq number
     ret = get_fb_seq_num(hctx, seq_max);
@@ -1364,7 +1373,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                 // if we must read the full object, we set the reads[] to
                 // contain a single read, indicating the entire object.
                 if (read_full_object) {
-                    int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
+                    int fb_seq_num = Tables::DATASTRUCT_SEQ_NUM_MIN;
                     int off = 0;
                     int len = 0;
                     std::vector<unsigned int> rnums = {};
