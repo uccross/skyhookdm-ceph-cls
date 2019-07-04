@@ -284,6 +284,7 @@ add_executable(fbwriter tabular/fbwriter.cc  tabular/cls_tabular_utils.cc)
 target_link_libraries(fbwriter librados global re2 arrow)
 install(TARGETS fbwriter DESTINATION bin)
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 # skyhook fbreader
@@ -300,3 +301,11 @@ install(TARGETS fbwriter_skyroot DESTINATION bin)
 >>>>>>> Update CMakeLists.txt
 =======
 >>>>>>> removing reader and writer code.
+=======
+
+# skyhook fbreader
+add_executable(fbreader tabular/fbreader.cc tabular/cls_tabular_utils.cc)
+target_link_libraries(fbreader librados global re2)
+install(TARGETS fbreader DESTINATION bin)
+
+>>>>>>> added reader for Rows/Col flatbuffers
