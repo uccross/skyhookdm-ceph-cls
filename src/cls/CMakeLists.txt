@@ -283,6 +283,7 @@ install(TARGETS cls_tabular DESTINATION ${cls_dir})
 add_executable(fbwriter tabular/fbwriter.cc  tabular/cls_tabular_utils.cc)
 target_link_libraries(fbwriter librados global re2 arrow)
 install(TARGETS fbwriter DESTINATION bin)
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 # skyhook fbreader
@@ -297,3 +298,5 @@ install(TARGETS fbwriter_skyroot DESTINATION bin)
 
 =======
 >>>>>>> Update CMakeLists.txt
+=======
+>>>>>>> removing reader and writer code.
