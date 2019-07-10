@@ -287,6 +287,7 @@ install(TARGETS fbwriter DESTINATION bin)
 <<<<<<< HEAD
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # skyhook fbreader
 add_executable(fbreader tabular/fbreader.cc)
 target_link_libraries(fbreader librados global re2)
@@ -317,3 +318,5 @@ target_link_libraries(fbwriter_skyroot librados global re2)
 install(TARGETS fbwriter_skyroot DESTINATION bin)
 
 >>>>>>> drafting writer.
+=======
+>>>>>>> Update CMakeLists.txt
