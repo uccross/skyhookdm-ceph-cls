@@ -20,6 +20,7 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DATA_SCHEMA_VERSION = 10,
     VT_DATA_SCHEMA = 12,
 <<<<<<< HEAD
+<<<<<<< HEAD
     VT_DB_SCHEMA_NAME = 14,
     VT_TABLE_NAME = 16,
     VT_DELETE_VECTOR = 18,
@@ -30,6 +31,12 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_DELETE_VECTOR = 18,
     VT_ROWS = 20,
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+    VT_DB_SCHEMA_NAME = 14,
+    VT_TABLE_NAME = 16,
+    VT_DELETE_VECTOR = 18,
+    VT_ROWS_VEC = 20,
+>>>>>>> identifier changes plus whitespace clean up.
     VT_NROWS = 22
   };
   int32_t data_format_type() const {
@@ -48,12 +55,17 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return GetPointer<const flatbuffers::String *>(VT_DATA_SCHEMA);
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
   const flatbuffers::String *db_schema_name() const {
     return GetPointer<const flatbuffers::String *>(VT_DB_SCHEMA_NAME);
 =======
   const flatbuffers::String *db_schema() const {
     return GetPointer<const flatbuffers::String *>(VT_DB_SCHEMA);
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  const flatbuffers::String *db_schema_name() const {
+    return GetPointer<const flatbuffers::String *>(VT_DB_SCHEMA_NAME);
+>>>>>>> identifier changes plus whitespace clean up.
   }
   const flatbuffers::String *table_name() const {
     return GetPointer<const flatbuffers::String *>(VT_TABLE_NAME);
@@ -62,12 +74,17 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DELETE_VECTOR);
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
   const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *rows_vec() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *>(VT_ROWS_VEC);
 =======
   const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *rows() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *>(VT_ROWS);
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *rows_vec() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>> *>(VT_ROWS_VEC);
+>>>>>>> identifier changes plus whitespace clean up.
   }
   uint32_t nrows() const {
     return GetField<uint32_t>(VT_NROWS, 0);
@@ -81,16 +98,22 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_DATA_SCHEMA) &&
            verifier.VerifyString(data_schema()) &&
 <<<<<<< HEAD
+<<<<<<< HEAD
            VerifyOffset(verifier, VT_DB_SCHEMA_NAME) &&
            verifier.VerifyString(db_schema_name()) &&
 =======
            VerifyOffset(verifier, VT_DB_SCHEMA) &&
            verifier.VerifyString(db_schema()) &&
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+           VerifyOffset(verifier, VT_DB_SCHEMA_NAME) &&
+           verifier.VerifyString(db_schema_name()) &&
+>>>>>>> identifier changes plus whitespace clean up.
            VerifyOffset(verifier, VT_TABLE_NAME) &&
            verifier.VerifyString(table_name()) &&
            VerifyOffset(verifier, VT_DELETE_VECTOR) &&
            verifier.VerifyVector(delete_vector()) &&
+<<<<<<< HEAD
 <<<<<<< HEAD
            VerifyOffset(verifier, VT_ROWS_VEC) &&
            verifier.VerifyVector(rows_vec()) &&
@@ -100,6 +123,11 @@ struct Table_FBX FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVector(rows()) &&
            verifier.VerifyVectorOfTables(rows()) &&
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+           VerifyOffset(verifier, VT_ROWS_VEC) &&
+           verifier.VerifyVector(rows_vec()) &&
+           verifier.VerifyVectorOfTables(rows_vec()) &&
+>>>>>>> identifier changes plus whitespace clean up.
            VerifyField<uint32_t>(verifier, VT_NROWS) &&
            verifier.EndTable();
   }
@@ -124,12 +152,17 @@ struct Table_FBXBuilder {
     fbb_.AddOffset(Table_FBX::VT_DATA_SCHEMA, data_schema);
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
   void add_db_schema_name(flatbuffers::Offset<flatbuffers::String> db_schema_name) {
     fbb_.AddOffset(Table_FBX::VT_DB_SCHEMA_NAME, db_schema_name);
 =======
   void add_db_schema(flatbuffers::Offset<flatbuffers::String> db_schema) {
     fbb_.AddOffset(Table_FBX::VT_DB_SCHEMA, db_schema);
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  void add_db_schema_name(flatbuffers::Offset<flatbuffers::String> db_schema_name) {
+    fbb_.AddOffset(Table_FBX::VT_DB_SCHEMA_NAME, db_schema_name);
+>>>>>>> identifier changes plus whitespace clean up.
   }
   void add_table_name(flatbuffers::Offset<flatbuffers::String> table_name) {
     fbb_.AddOffset(Table_FBX::VT_TABLE_NAME, table_name);
@@ -138,12 +171,17 @@ struct Table_FBXBuilder {
     fbb_.AddOffset(Table_FBX::VT_DELETE_VECTOR, delete_vector);
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
   void add_rows_vec(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>> rows_vec) {
     fbb_.AddOffset(Table_FBX::VT_ROWS_VEC, rows_vec);
 =======
   void add_rows(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>> rows) {
     fbb_.AddOffset(Table_FBX::VT_ROWS, rows);
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  void add_rows_vec(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>> rows_vec) {
+    fbb_.AddOffset(Table_FBX::VT_ROWS_VEC, rows_vec);
+>>>>>>> identifier changes plus whitespace clean up.
   }
   void add_nrows(uint32_t nrows) {
     fbb_.AddElement<uint32_t>(Table_FBX::VT_NROWS, nrows, 0);
@@ -168,6 +206,7 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBX(
     int32_t data_schema_version = 0,
     flatbuffers::Offset<flatbuffers::String> data_schema = 0,
 <<<<<<< HEAD
+<<<<<<< HEAD
     flatbuffers::Offset<flatbuffers::String> db_schema_name = 0,
     flatbuffers::Offset<flatbuffers::String> table_name = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> delete_vector = 0,
@@ -181,17 +220,24 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBX(
   builder_.add_db_schema_name(db_schema_name);
 =======
     flatbuffers::Offset<flatbuffers::String> db_schema = 0,
+=======
+    flatbuffers::Offset<flatbuffers::String> db_schema_name = 0,
+>>>>>>> identifier changes plus whitespace clean up.
     flatbuffers::Offset<flatbuffers::String> table_name = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> delete_vector = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>> rows = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>> rows_vec = 0,
     uint32_t nrows = 0) {
   Table_FBXBuilder builder_(_fbb);
   builder_.add_nrows(nrows);
-  builder_.add_rows(rows);
+  builder_.add_rows_vec(rows_vec);
   builder_.add_delete_vector(delete_vector);
   builder_.add_table_name(table_name);
+<<<<<<< HEAD
   builder_.add_db_schema(db_schema);
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  builder_.add_db_schema_name(db_schema_name);
+>>>>>>> identifier changes plus whitespace clean up.
   builder_.add_data_schema(data_schema);
   builder_.add_data_schema_version(data_schema_version);
   builder_.add_data_structure_version(data_structure_version);
@@ -208,6 +254,7 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBXDirect(
     int32_t data_schema_version = 0,
     const char *data_schema = nullptr,
 <<<<<<< HEAD
+<<<<<<< HEAD
     const char *db_schema_name = nullptr,
     const char *table_name = nullptr,
     const std::vector<uint8_t> *delete_vector = nullptr,
@@ -220,16 +267,23 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBXDirect(
   auto rows_vec__ = rows_vec ? _fbb.CreateVector<flatbuffers::Offset<Record_FBX>>(*rows_vec) : 0;
 =======
     const char *db_schema = nullptr,
+=======
+    const char *db_schema_name = nullptr,
+>>>>>>> identifier changes plus whitespace clean up.
     const char *table_name = nullptr,
     const std::vector<uint8_t> *delete_vector = nullptr,
-    const std::vector<flatbuffers::Offset<Record_FBX>> *rows = nullptr,
+    const std::vector<flatbuffers::Offset<Record_FBX>> *rows_vec = nullptr,
     uint32_t nrows = 0) {
   auto data_schema__ = data_schema ? _fbb.CreateString(data_schema) : 0;
-  auto db_schema__ = db_schema ? _fbb.CreateString(db_schema) : 0;
+  auto db_schema_name__ = db_schema_name ? _fbb.CreateString(db_schema_name) : 0;
   auto table_name__ = table_name ? _fbb.CreateString(table_name) : 0;
   auto delete_vector__ = delete_vector ? _fbb.CreateVector<uint8_t>(*delete_vector) : 0;
+<<<<<<< HEAD
   auto rows__ = rows ? _fbb.CreateVector<flatbuffers::Offset<Record_FBX>>(*rows) : 0;
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+  auto rows_vec__ = rows_vec ? _fbb.CreateVector<flatbuffers::Offset<Record_FBX>>(*rows_vec) : 0;
+>>>>>>> identifier changes plus whitespace clean up.
   return Tables::CreateTable_FBX(
       _fbb,
       data_format_type,
@@ -237,6 +291,7 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBXDirect(
       data_structure_version,
       data_schema_version,
       data_schema__,
+<<<<<<< HEAD
 <<<<<<< HEAD
       db_schema_name__,
       table_name__,
@@ -248,6 +303,12 @@ inline flatbuffers::Offset<Table_FBX> CreateTable_FBXDirect(
       delete_vector__,
       rows__,
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+      db_schema_name__,
+      table_name__,
+      delete_vector__,
+      rows_vec__,
+>>>>>>> identifier changes plus whitespace clean up.
       nrows);
 }
 

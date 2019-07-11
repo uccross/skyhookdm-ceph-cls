@@ -8,6 +8,9 @@ namespace Tables;
 
 table Table_FBX {
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> identifier changes plus whitespace clean up.
   data_format_type       : int32 ;               
   skyhook_version        : int32 ;                    
   data_structure_version : int32 ;  // schema version
@@ -16,6 +19,7 @@ table Table_FBX {
   db_schema_name         : string ; // group name for that database
   table_name             : string ; // table name
   delete_vector          : [ ubyte ] ; // used to signal a deleted row (dead records)
+<<<<<<< HEAD
   rows_vec               : [ Record_FBX ] ; // vector of Record Tables
   nrows                  : uint32 ;         // number of rows in buffer
 }
@@ -38,13 +42,21 @@ root_type Table_FBX ;
   delete_vector:[ubyte];                   // used to signal a deleted row (dead records)
   rows:[ Record_FBX ];                           // vector of Row Tables
   nrows:uint32;                            // number of rows in buffer
+=======
+  rows_vec               : [ Record_FBX ] ; // vector of Row Tables
+  nrows                  : uint32 ;         // number of rows in buffer
+>>>>>>> identifier changes plus whitespace clean up.
 }
 
 table Record_FBX {
-    RID:uint64;            // record ID
-    nullbits:[uint64];        // keeps track of null fields within the data
-    data:[string];    // row data
+  RID      : uint64 ;     // record ID
+  nullbits : [ uint64 ] ; // keeps track of null fields within the data
+  data     : [ string ] ; // row data
 }
 
+<<<<<<< HEAD
 root_type Table_FBX;
 >>>>>>> added csv version of skyhookv2 schema.
+=======
+root_type Table_FBX ;
+>>>>>>> identifier changes plus whitespace clean up.
