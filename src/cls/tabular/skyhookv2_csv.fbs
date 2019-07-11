@@ -20,6 +20,7 @@ table Table_FBX {
   table_name             : string ; // table name
   delete_vector          : [ ubyte ] ; // used to signal a deleted row (dead records)
 <<<<<<< HEAD
+<<<<<<< HEAD
   rows_vec               : [ Record_FBX ] ; // vector of Record Tables
   nrows                  : uint32 ;         // number of rows in buffer
 }
@@ -44,6 +45,9 @@ root_type Table_FBX ;
   nrows:uint32;                            // number of rows in buffer
 =======
   rows_vec               : [ Record_FBX ] ; // vector of Row Tables
+=======
+  rows_vec               : [ Record_FBX ] ; // vector of Record Tables
+>>>>>>> edited comment in fbs file. note that i actually
   nrows                  : uint32 ;         // number of rows in buffer
 >>>>>>> identifier changes plus whitespace clean up.
 }
