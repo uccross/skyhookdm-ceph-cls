@@ -56,13 +56,17 @@ action "build ceph image" {
 action "run tests" {
   needs = "build ceph image"
   uses = "actions/docker/cli@master"
-  args = [
+  runs = [
     "sh", "-c",
+<<<<<<< HEAD
     "docker", "run", "--rm",
     "--volume", "$GITHUB_WORKSPACE:/ws",
     "--workdir=/ws",
     "--entrypoint=/ws/ci/scripts/run-skyhook-test.sh",
     "popperized/ceph:luminous",
 >>>>>>> Builds image for ceph as part of workflow
+=======
+    "docker run --rm --volume $GITHUB_WORKSPACE:/ws --workdir=/ws --entrypoint=/ws/ci/scripts/run-skyhook-test.sh popperized/ceph:luminous"
+>>>>>>> Fixes invocation of docker run
   ]
 }
