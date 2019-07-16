@@ -19,6 +19,7 @@ action "download test data" {
   runs = ["sh", "-c", "ci/scripts/download-test-data.sh"]
 }
 
+<<<<<<< HEAD
 # NOTE: done offline to speedup travis build time
 
 action "build ceph image" {
@@ -45,5 +46,23 @@ action "run tests" {
   uses = "docker://popperized/ceph:luminous"
   runs = [
     "sh", "-c", "ci/scripts/run-skyhook-test.sh"
+=======
+action "build ceph image" {
+  needs = "download test data"
+  uses = "actions/docker/cli@master"
+  args = "build -t popperized/ceph:luminous ci/docker"
+}
+
+action "run tests" {
+  needs = "build ceph image"
+  uses = "actions/docker/cli@master"
+  args = [
+    "sh", "-c",
+    "docker", "run", "--rm",
+    "--volume", "$GITHUB_WORKSPACE:/ws",
+    "--workdir=/ws",
+    "--entrypoint=/ws/ci/scripts/run-skyhook-test.sh",
+    "popperized/ceph:luminous",
+>>>>>>> Builds image for ceph as part of workflow
   ]
 }
