@@ -20,6 +20,7 @@ action "download test data" {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # NOTE: done offline to speedup travis build time
 
 action "build ceph image" {
@@ -47,6 +48,10 @@ action "run tests" {
   runs = [
     "sh", "-c", "ci/scripts/run-skyhook-test.sh"
 =======
+=======
+# build an image with upstream ceph-mon/ceph-osd packages and add skyhook
+# runtime dependencies such as libarrow and libhdf5
+>>>>>>> Adds comments on contents of Ceph image
 action "build ceph image" {
   needs = "download test data"
   uses = "actions/docker/cli@master"
