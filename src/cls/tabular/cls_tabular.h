@@ -67,7 +67,8 @@ enum SkyFormatType {
     SFT_FLATBUF_CSV_ROW,
     SFT_ARROW,
     SFT_PG_TUPLE,
-    SFT_CSV
+    SFT_CSV,
+    SFT_HDF5
 };
 
 >>>>>>> Added enum for data formats supported, added char and uchar case to regex for string types, updated root_table field names.
