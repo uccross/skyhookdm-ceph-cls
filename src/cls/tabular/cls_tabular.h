@@ -25,12 +25,16 @@ void cls_log_message(std::string msg, bool is_err, int log_level);
 #define ARROW_RID_INDEX(cols) (cols)
 #define ARROW_DELVEC_INDEX(cols) (cols + 1)
 
+<<<<<<< HEAD
 enum layout_type_t {
     LAYOUT_FLATBUFFER = 1,
     LAYOUT_ARROW,
     LAYOUT_INVALID
 };
 
+=======
+// metadata corresponding to struct sky_root table
+>>>>>>> Add fb_meta struct as wrapper around all underlying supported data formats stored on disk.
 enum arrow_metadata_t {
     METADATA_SKYHOOK_VERSION,
     METADATA_DATA_SCHEMA_VERSION,
