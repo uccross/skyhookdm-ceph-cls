@@ -75,7 +75,17 @@ enum SkyFormatType {
     SFT_HDF5
 };
 
+<<<<<<< HEAD
 >>>>>>> Added enum for data formats supported, added char and uchar case to regex for string types, updated root_table field names.
+=======
+enum CompressionType {
+    none = 0,
+    // lzw,  TODO: placeholder, not yet supported.
+    // bz2,
+    // etc.
+};
+
+>>>>>>> Added fb_meta support when unpacking bl from obj read. Added optional args to manually specify type for testing new formats.  Added defaults to some fb_meta fields for future use.
 /*
  * Stores the query request parameters.  This is encoded by the client and
  * decoded by server (osd node) for query processing.
