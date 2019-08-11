@@ -290,6 +290,7 @@ install(TARGETS fbwriter DESTINATION bin)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -326,12 +327,15 @@ install(TARGETS fbwriter_skyroot DESTINATION bin)
 =======
 >>>>>>> Update CMakeLists.txt
 =======
+=======
+>>>>>>> added fbwriter_fbu w no fb_meta support.
 
 # skyhook fbwriter_fbu
 add_executable(fbwriter_fbu tabular/fbwriter_fbu.cc tabular/cls_tabular_utils.cc)
 target_link_libraries(fbwriter_fbu librados global re2 arrow parquet )
 install(TARGETS fbwriter_fbu DESTINATION bin)
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> added fbwriter_fbu w no fb_meta support.
 =======
@@ -341,3 +345,5 @@ target_link_libraries(fbreader_fbu2 librados global re2 arrow parquet )
 install(TARGETS fbreader_fbu2 DESTINATION bin)
 
 >>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
+=======
+>>>>>>> added fbwriter_fbu w no fb_meta support.
