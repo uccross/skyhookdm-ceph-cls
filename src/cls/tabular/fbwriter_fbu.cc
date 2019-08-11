@@ -632,12 +632,15 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
 <<<<<<< HEAD
     std::cout << "datasz = " << datasz << std::endl ;
     std::cout << "wrapper_bl.length() = " << wrapper_bl.length() << std::endl ;
+<<<<<<< HEAD
 =======
     //std::cout << "datasz = " << datasz << std::endl ;
 >>>>>>> checkpoint save.
 =======
     std::cout << "datasz = " << datasz << std::endl ;
 >>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
+=======
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
 
     // --------------------------------------------- //
     // build out FB_Meta
@@ -646,12 +649,17 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     Tables::createFbMeta( meta_builder, 
                           SFT_FLATBUF_UNION_ROW,
 <<<<<<< HEAD
+<<<<<<< HEAD
                           reinterpret_cast<unsigned char*>( wrapper_bl.c_str() ),
                           wrapper_bl.length() ) ;
 =======
                           reinterpret_cast<unsigned char*>( dataptr ),
                           datasz ) ;
 >>>>>>> checkpoint save.
+=======
+                          reinterpret_cast<unsigned char*>( wrapper_bl.c_str() ),
+                          wrapper_bl.length() ) ;
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
 
     // add meta_builder's data into a bufferlist as char*
     ceph::bufferlist meta_bl ;
@@ -1018,13 +1026,11 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     // --------------------------------------------- //
     // build out FB_Meta
     // --------------------------------------------- //
-    char* bl_seq_dataptr = bl_seq.c_str() ;
-
     flatbuffers::FlatBufferBuilder *meta_builder = new flatbuffers::FlatBufferBuilder();
     Tables::createFbMeta( meta_builder, 
                           SFT_FLATBUF_UNION_COL,
-                          reinterpret_cast<unsigned char*>( bl_seq_dataptr ),
-                          buffer_size ) ;
+                          reinterpret_cast<unsigned char*>( bl_seq.c_str() ),
+                          bl_seq.length() ) ;
 
 <<<<<<< HEAD
 >>>>>>> checkpoint save.

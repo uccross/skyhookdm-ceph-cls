@@ -95,6 +95,9 @@ void do_read( bool debug,
     std::cout << "num_bytes_read : " << num_bytes_read << std::endl ; 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
   // extract FB_Meta. wrapped_bl_seq will only ever contain 1 bl, which is an FB_Meta.
   ceph::bufferlist::iterator it_wrapped = wrapped_bl_seq.begin() ;
   ceph::bufferlist meta_wrapper_bl ;
@@ -112,13 +115,17 @@ void do_read( bool debug,
   ceph::bufferlist bl_seq ;
   bl_seq.append( blob_dataptr, blob_sz ) ;
   ceph::bufferlist::iterator it_bl_seq = bl_seq.begin() ;
+<<<<<<< HEAD
 =======
   ceph::bufferlist::iterator it_wrapped = wrapped_bl_seq.begin() ;
 >>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
+=======
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
 
   // ================================================================================ //
   // display data
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   while( it_bl_seq.get_remaining() > 0 ) {
 
@@ -133,10 +140,20 @@ void do_read( bool debug,
 
 =======
   while( it_wrapped.get_remaining() > 0 ) {
+=======
+  while( it_bl_seq.get_remaining() > 0 ) {
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
 
     if( debug )
-      std::cout << "it_wrapped.get_remaining() = " << it_wrapped.get_remaining() << std::endl ;
+      std::cout << "it_bl_seq.get_remaining() = " << it_bl_seq.get_remaining() << std::endl ;
 
+    ceph::bufferlist bl ;
+    ::decode( bl, it_bl_seq ) ; // this decrements get_remaining by moving iterator
+    const char* dataptr = bl.c_str() ;
+    size_t datasz       = bl.length() ;
+    std::cout << "datasz = " << datasz << std::endl ;
+
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     // grab the Root
@@ -173,6 +190,8 @@ exit(1) ;
     const char* meta_dataptr = meta_wrapper_bl.c_str() ;
     size_t meta_datasz       = meta_wrapper_bl.length() ;
 >>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
+=======
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
     bool print_header   = true ;
     bool print_verbose  = false ;
     if( debug )
@@ -194,6 +213,7 @@ exit(1) ;
 >>>>>>> checkpoint save.
 =======
 
+<<<<<<< HEAD
     std::cout << "meta_datasz = " << meta_datasz << std::endl ;
 
     // get the blob
@@ -217,6 +237,14 @@ exit(1) ;
 */
 >>>>>>> checkpoint save.
 =======
+=======
+      printFlatbufFBUAsCSV(
+        dataptr,
+        datasz,
+        print_header,
+        print_verbose,
+        max_to_print ) ;
+>>>>>>> fbwriter_fbu and fbreader_fbu2 now work with fb_meta.
 
 >>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
     if( debug )
