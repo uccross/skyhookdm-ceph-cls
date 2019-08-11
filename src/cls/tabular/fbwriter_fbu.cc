@@ -629,11 +629,15 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::cout << "datasz = " << datasz << std::endl ;
     std::cout << "wrapper_bl.length() = " << wrapper_bl.length() << std::endl ;
 =======
     //std::cout << "datasz = " << datasz << std::endl ;
 >>>>>>> checkpoint save.
+=======
+    std::cout << "datasz = " << datasz << std::endl ;
+>>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
 
     // --------------------------------------------- //
     // build out FB_Meta
@@ -654,6 +658,7 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     char* meta_builder_ptr = reinterpret_cast<char*>( meta_builder->GetBufferPointer() ) ;
     int meta_builder_size  = meta_builder->GetSize() ;
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::cout << "meta_builder_size = " << meta_builder_size << std::endl ;
     meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
     delete meta_builder;
@@ -666,6 +671,15 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
     delete meta_builder;
 >>>>>>> checkpoint save.
+=======
+    std::cout << "meta_builder_size = " << meta_builder_size << std::endl ;
+    meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
+    delete meta_builder;
+    librados::bufferlist meta_wrapper_bl ;
+    ::encode( meta_bl, meta_wrapper_bl ) ;
+    size_t meta_wrapper_bl_sz = meta_wrapper_bl.length() ;
+    std::cout << "meta_wrapper_bl_sz = " << meta_wrapper_bl_sz << std::endl ;
+>>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
 
     // --------------------------------------------- //
     // do the write
@@ -680,8 +694,8 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
 =======
 >>>>>>> checkpoint save.
     if( inputs.writeto == "ceph" )
-      //writeToCeph( wrapper_bl, datasz, inputs.targetoid, inputs.targetpool ) ;
-      writeToCeph( meta_bl, meta_builder_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
+      //writeToCeph( wrapper_bl, datasz, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
+      writeToCeph( meta_wrapper_bl, meta_builder_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
     else if( inputs.writeto == "disk" )
 <<<<<<< HEAD
       writeToDisk( wrapper_bl, datasz, inputs.targetoid ) ;
@@ -962,6 +976,7 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::cout << "buffer_size = " << buffer_size << std::endl ;
 
     // --------------------------------------------- //
@@ -996,15 +1011,44 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
       writeToDisk( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid ) ;
 =======
 =======
-    // --------------------------------------------- //
-    // build out FB_META
-    // --------------------------------------------- //
-    //
+=======
+    std::cout << "buffer_size = " << buffer_size << std::endl ;
 
+>>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
+    // --------------------------------------------- //
+    // build out FB_Meta
+    // --------------------------------------------- //
+    char* bl_seq_dataptr = bl_seq.c_str() ;
+
+    flatbuffers::FlatBufferBuilder *meta_builder = new flatbuffers::FlatBufferBuilder();
+    Tables::createFbMeta( meta_builder, 
+                          SFT_FLATBUF_UNION_COL,
+                          reinterpret_cast<unsigned char*>( bl_seq_dataptr ),
+                          buffer_size ) ;
+
+<<<<<<< HEAD
 >>>>>>> checkpoint save.
+=======
+    // add meta_builder's data into a bufferlist as char*
+    ceph::bufferlist meta_bl ;
+    char* meta_builder_ptr = reinterpret_cast<char*>( meta_builder->GetBufferPointer() ) ;
+    int meta_builder_size  = meta_builder->GetSize() ;
+    std::cout << "meta_builder_size = " << meta_builder_size << std::endl ;
+    meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
+    delete meta_builder;
+    librados::bufferlist meta_wrapper_bl ;
+    ::encode( meta_bl, meta_wrapper_bl ) ;
+    size_t meta_wrapper_bl_sz = meta_wrapper_bl.length() ;
+    std::cout << "meta_wrapper_bl_sz = " << meta_wrapper_bl_sz << std::endl ;
+
+    // --------------------------------------------- //
+    // do the write
+    // --------------------------------------------- //
+>>>>>>> checkpoint save fb_meta supported in fbwriter_fbu and fbreader_fbu2 for rows.
     // write bufferlist
     if( inputs.writeto == "ceph" )
-      writeToCeph( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
+      //writeToCeph( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
+      writeToCeph( meta_wrapper_bl, meta_builder_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
     else if( inputs.writeto == "disk" )
 <<<<<<< HEAD
       writeToDisk( bl_seq, buffer_size, inputs.targetoid ) ;
