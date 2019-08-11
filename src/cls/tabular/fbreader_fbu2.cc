@@ -94,6 +94,7 @@ void do_read( bool debug,
   if( debug )
     std::cout << "num_bytes_read : " << num_bytes_read << std::endl ; 
 
+<<<<<<< HEAD
   // extract FB_Meta. wrapped_bl_seq will only ever contain 1 bl, which is an FB_Meta.
   ceph::bufferlist::iterator it_wrapped = wrapped_bl_seq.begin() ;
   ceph::bufferlist meta_wrapper_bl ;
@@ -111,10 +112,14 @@ void do_read( bool debug,
   ceph::bufferlist bl_seq ;
   bl_seq.append( blob_dataptr, blob_sz ) ;
   ceph::bufferlist::iterator it_bl_seq = bl_seq.begin() ;
+=======
+  ceph::bufferlist::iterator it_wrapped = wrapped_bl_seq.begin() ;
+>>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
 
   // ================================================================================ //
   // display data
 
+<<<<<<< HEAD
   while( it_bl_seq.get_remaining() > 0 ) {
 
     if( debug )
@@ -126,18 +131,39 @@ void do_read( bool debug,
     size_t datasz       = bl.length() ;
     std::cout << "datasz = " << datasz << std::endl ;
 
+=======
+  while( it_wrapped.get_remaining() > 0 ) {
+
+    if( debug )
+      std::cout << "it_wrapped.get_remaining() = " << it_wrapped.get_remaining() << std::endl ;
+
+    // grab the Root
+    ceph::bufferlist bl ;
+    ::decode( bl, it_wrapped ) ; // this decrements get_remaining by moving iterator
+    const char* dataptr = bl.c_str() ;
+    size_t datasz       = bl.length() ;
+>>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
     bool print_header   = true ;
     bool print_verbose  = false ;
     if( debug )
       print_verbose  = true ;
     long long int max_to_print = 0 ;
 
+<<<<<<< HEAD
       printFlatbufFBUAsCSV(
         dataptr,
         datasz,
         print_header,
         print_verbose,
         max_to_print ) ;
+=======
+    printFlatbufFBUAsCSV(
+      dataptr,
+      datasz,
+      print_header,
+      print_verbose,
+      max_to_print ) ;
+>>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
 
     if( debug )
       std::cout << "loop while" << std::endl ;

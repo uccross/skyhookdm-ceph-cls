@@ -337,13 +337,19 @@ install(TARGETS fbwriter_fbu DESTINATION bin)
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> added fbwriter_fbu w no fb_meta support.
 =======
+=======
+>>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
 # skyhook fbreader_fbu2
 add_executable(fbreader_fbu2 tabular/fbreader_fbu2.cc tabular/cls_tabular_utils.cc)
 target_link_libraries(fbreader_fbu2 librados global re2 arrow parquet )
 install(TARGETS fbreader_fbu2 DESTINATION bin)
 
+<<<<<<< HEAD
 >>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+>>>>>>> added stand-alone fbreader_fbu2. no support for fb_meta.
