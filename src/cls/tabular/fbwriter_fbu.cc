@@ -124,18 +124,26 @@ struct cmdline_inputs_t {
   uint64_t cols_per_fb ;
   std::string writeto ;
 <<<<<<< HEAD
+<<<<<<< HEAD
   std::string targetformat ;
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+  std::string targetformat ;
+>>>>>>> checkpoint save.
   std::string targetoid ;
   std::string targetpool ;
 } ;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> checkpoint save.
 int writeToDisk( librados::bufferlist wrapper_bl, 
                  int bufsz, 
                  std::string target_format, 
                  std::string target_oid ) {
+<<<<<<< HEAD
   int mode = 0600 ;
   std::string fname = "skyhook."+ target_format + "." + target_oid + ".0" ;
 =======
@@ -144,6 +152,10 @@ int writeToDisk( librados::bufferlist wrapper_bl, int bufsz, std::string target_
   int mode = 0600 ;
   std::string fname = "Skyhook.v2."+ target_oid ;
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+  int mode = 0600 ;
+  std::string fname = "skyhook."+ target_format + "." + target_oid + ".0" ;
+>>>>>>> checkpoint save.
   wrapper_bl.write_file( fname.c_str(), mode ) ;
   printf( "buff size: %d, wrapper_bl size: %d\n", bufsz, wrapper_bl.length() ) ;
 
@@ -151,14 +163,20 @@ int writeToDisk( librados::bufferlist wrapper_bl, int bufsz, std::string target_
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> checkpoint save.
 int writeToCeph( librados::bufferlist bl_seq, 
                  int bufsz, 
                  std::string target_format, 
                  std::string target_oid, 
                  std::string target_pool ) {
+<<<<<<< HEAD
 =======
 int writeToCeph( librados::bufferlist bl_seq, int bufsz, std::string target_oid, std::string target_pool ) {
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+>>>>>>> checkpoint save.
 
   // save to ceph object
   // connect to rados
@@ -177,10 +195,14 @@ int writeToCeph( librados::bufferlist bl_seq, int bufsz, std::string target_oid,
   bufferlist::iterator p = bl_seq.begin();
   size_t i = p.get_remaining() ;
 <<<<<<< HEAD
+<<<<<<< HEAD
   std::cout << "num bytes written : " << i << std::endl ;
 =======
   std::cout << i << std::endl ;
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+  std::cout << "num bytes written : " << i << std::endl ;
+>>>>>>> checkpoint save.
   ret = ioctx.write( obj_name, bl_seq, i, 0 ) ;
 
   ioctx.close() ;
@@ -230,9 +252,13 @@ int main( int argc, char *argv[] ) {
   uint64_t cols_per_fb ;
   std::string writeto ;
 <<<<<<< HEAD
+<<<<<<< HEAD
   std::string targetformat ;
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+  std::string targetformat ;
+>>>>>>> checkpoint save.
   std::string targetoid ;
   std::string targetpool ;
 
@@ -250,9 +276,13 @@ int main( int argc, char *argv[] ) {
     ("cols_per_fb", po::value<uint64_t>(&cols_per_fb), "cols_per_fb")
     ("writeto", po::value<std::string>(&writeto)->required(), "writeto")
 <<<<<<< HEAD
+<<<<<<< HEAD
     ("targetformat", po::value<std::string>(&targetformat)->required(), "targetformat")
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+    ("targetformat", po::value<std::string>(&targetformat)->required(), "targetformat")
+>>>>>>> checkpoint save.
     ("targetoid", po::value<std::string>(&targetoid)->required(), "targetoid")
     ("targetpool", po::value<std::string>(&targetpool)->required(), "targetpool") ;
 
@@ -277,9 +307,13 @@ int main( int argc, char *argv[] ) {
   inputs.ncols            = ncols ;
   inputs.writeto          = writeto ;
 <<<<<<< HEAD
+<<<<<<< HEAD
   inputs.targetformat     = targetformat ;
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+  inputs.targetformat     = targetformat ;
+>>>>>>> checkpoint save.
   inputs.targetoid        = targetoid ;
   inputs.targetpool       = targetpool ;
   inputs.cols_per_fb      = cols_per_fb ;
@@ -304,12 +338,18 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     std::cout << "inputs.nrows            : " << std::to_string( inputs.nrows ) << std::endl ;
     std::cout << "inputs.ncols            : " << std::to_string( inputs.ncols ) << std::endl ;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> checkpoint save.
     std::cout << "inputs.writeto          : " << inputs.writeto << std::endl ;
     std::cout << "inputs.targetformat     : " << inputs.targetformat << std::endl ;
     std::cout << "inputs.targetoid        : " << inputs.targetoid << std::endl ;
     std::cout << "inputs.targetpool       : " << inputs.targetpool << std::endl ;
+<<<<<<< HEAD
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+>>>>>>> checkpoint save.
     std::cout << "inputs.cols_per_fb      : " << std::to_string( inputs.cols_per_fb ) << std::endl ;
   }
 
@@ -571,11 +611,16 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     builder.Finish( root ) ;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     //const char* dataptr = reinterpret_cast<char*>( builder.GetBufferPointer() ) ;
     char* dataptr = reinterpret_cast<char*>( builder.GetBufferPointer() ) ;
 =======
     const char* dataptr = reinterpret_cast<char*>( builder.GetBufferPointer() ) ;
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+    //const char* dataptr = reinterpret_cast<char*>( builder.GetBufferPointer() ) ;
+    char* dataptr = reinterpret_cast<char*>( builder.GetBufferPointer() ) ;
+>>>>>>> checkpoint save.
     int datasz          = builder.GetSize() ;
     librados::bufferlist bl;
     bl.append( dataptr, datasz ) ;
@@ -583,8 +628,12 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     ::encode( bl, wrapper_bl ) ;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::cout << "datasz = " << datasz << std::endl ;
     std::cout << "wrapper_bl.length() = " << wrapper_bl.length() << std::endl ;
+=======
+    //std::cout << "datasz = " << datasz << std::endl ;
+>>>>>>> checkpoint save.
 
     // --------------------------------------------- //
     // build out FB_Meta
@@ -592,13 +641,19 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     flatbuffers::FlatBufferBuilder *meta_builder = new flatbuffers::FlatBufferBuilder();
     Tables::createFbMeta( meta_builder, 
                           SFT_FLATBUF_UNION_ROW,
+<<<<<<< HEAD
                           reinterpret_cast<unsigned char*>( wrapper_bl.c_str() ),
                           wrapper_bl.length() ) ;
+=======
+                          reinterpret_cast<unsigned char*>( dataptr ),
+                          datasz ) ;
+>>>>>>> checkpoint save.
 
     // add meta_builder's data into a bufferlist as char*
     ceph::bufferlist meta_bl ;
     char* meta_builder_ptr = reinterpret_cast<char*>( meta_builder->GetBufferPointer() ) ;
     int meta_builder_size  = meta_builder->GetSize() ;
+<<<<<<< HEAD
     std::cout << "meta_builder_size = " << meta_builder_size << std::endl ;
     meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
     delete meta_builder;
@@ -606,21 +661,34 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     ::encode( meta_bl, meta_wrapper_bl ) ;
     size_t meta_wrapper_bl_sz = meta_wrapper_bl.length() ;
     std::cout << "meta_wrapper_bl_sz = " << meta_wrapper_bl_sz << std::endl ;
+=======
+    //std::cout << "meta_builder_size = " << meta_builder_size << std::endl ;
+    meta_bl.append( meta_builder_ptr, meta_builder_size ) ;
+    delete meta_builder;
+>>>>>>> checkpoint save.
 
     // --------------------------------------------- //
     // do the write
     // --------------------------------------------- //
+<<<<<<< HEAD
     if( inputs.writeto == "ceph" )
       //writeToCeph( wrapper_bl, datasz, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
       writeToCeph( meta_wrapper_bl, meta_builder_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
     else if( inputs.writeto == "disk" )
       writeToDisk( wrapper_bl, datasz, inputs.targetformat, inputs.targetoid ) ;
 =======
+=======
+>>>>>>> checkpoint save.
     if( inputs.writeto == "ceph" )
-      writeToCeph( wrapper_bl, datasz, inputs.targetoid, inputs.targetpool ) ;
+      //writeToCeph( wrapper_bl, datasz, inputs.targetoid, inputs.targetpool ) ;
+      writeToCeph( meta_bl, meta_builder_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
     else if( inputs.writeto == "disk" )
+<<<<<<< HEAD
       writeToDisk( wrapper_bl, datasz, inputs.targetoid ) ;
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+      writeToDisk( wrapper_bl, datasz, inputs.targetformat, inputs.targetoid ) ;
+>>>>>>> checkpoint save.
     else {
       std::cout << ">>> unrecognized writeto '" << inputs.writeto << "'" << std::endl ;
       exit( 1 ) ;
@@ -893,6 +961,7 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     } //for
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::cout << "buffer_size = " << buffer_size << std::endl ;
 
     // --------------------------------------------- //
@@ -926,12 +995,23 @@ void do_write( cmdline_inputs_t inputs, bool debug ) {
     else if( inputs.writeto == "disk" )
       writeToDisk( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid ) ;
 =======
+=======
+    // --------------------------------------------- //
+    // build out FB_META
+    // --------------------------------------------- //
+    //
+
+>>>>>>> checkpoint save.
     // write bufferlist
     if( inputs.writeto == "ceph" )
-      writeToCeph( bl_seq, buffer_size, inputs.targetoid, inputs.targetpool ) ;
+      writeToCeph( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid, inputs.targetpool ) ;
     else if( inputs.writeto == "disk" )
+<<<<<<< HEAD
       writeToDisk( bl_seq, buffer_size, inputs.targetoid ) ;
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+      writeToDisk( bl_seq, buffer_size, inputs.targetformat, inputs.targetoid ) ;
+>>>>>>> checkpoint save.
     else {
       std::cout << ">>> unrecognized writeto '" << inputs.writeto << "'" << std::endl ;
       exit( 1 ) ;
