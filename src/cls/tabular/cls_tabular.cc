@@ -113,6 +113,7 @@ int set_fb_seq_num(cls_method_context_t hctx, unsigned int fb_seq_num) {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
 =======
 // Get sky_obj_type from xattr, if not present set to Flatbuffer
@@ -161,6 +162,8 @@ int set_sky_format_type(cls_method_context_t hctx, int format_type) {
 */
 
 >>>>>>> Added object type as an extended attribute
+=======
+>>>>>>> Fixed empty table processing on server
 /*
  * Build a skyhook index, insert to omap.
  * Index types are
@@ -1404,25 +1407,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                 std::vector<unsigned int> row_nums = it->second.rnums;
                 std::string msg = "off=" + std::to_string(off) +
                                   ";len=" + std::to_string(len);
-                // TODO: remove.
-                // get format type from fb_meta, instead of xattrs
-                /*
-                ret = get_sky_format_type(hctx, format_type);
-                if (ret == -ENOENT || ret == -ENODATA) {
-                    // If sky_format_type is not present then insert it in xattr.
-                    // Default value is set as a Flatbuffer
-                    ret = set_sky_format_type(hctx, SFT_FLATBUF_FLEX_ROW);
-                    if(ret < 0) {
-                        CLS_ERR("exec_query_op: error setting sky_format_type entry to xattr %d", ret);
-                        return ret;
-                    }
-                    format_type = SFT_FLATBUF_FLEX_ROW;
-                }
-                else if (ret < 0) {
-                    CLS_ERR("ERROR: exec_query_op: sky_format_type entry from xattr %d", ret);
-                    return ret;
-                }
-                */
 
                 uint64_t start = getns();
                 ret = cls_cxx_read(hctx, off, len, &b);
@@ -1527,7 +1511,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                     // call associated process method based on ds type
                     switch (meta.blob_format) {
 
-
                     case SFT_JSON: {
 
                         sky_root root = \
@@ -1592,7 +1575,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                                            row_nums);
 
                         if (ret != 0) {
-                            CLS_ERR("ERROR: processSkyFb %s", errmsg.c_str());
+                            CLS_ERR("ERROR: processArrow %s", errmsg.c_str());
                             CLS_ERR("ERROR: TablesErrCodes::%d", ret);
                             return -1;
                         }
@@ -1601,7 +1584,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                         convert_arrow_to_buffer(table, &buffer);
                         createFbMeta(meta_builder,
                                      SFT_ARROW,
-                                     (unsigned char *)buffer->ToString().c_str(),
+                                     reinterpret_cast<unsigned char*>(buffer->mutable_data()),
                                      buffer->size());
                         break;
                     }
@@ -1684,8 +1667,12 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                     if (op.index_read)
                         ds_rows_processed = row_nums.size();
                     else
+<<<<<<< HEAD
                         ds_rows_processed = root_rows;
                     break;
+=======
+                        ds_rows_processed = root.nrows;
+>>>>>>> Fixed empty table processing on server
 
                     // add this processed ds to sequence of bls and update counter
                     rows_processed += ds_rows_processed;
