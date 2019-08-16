@@ -888,6 +888,7 @@ int processArrow(
         std::string& errmsg,
         const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
 
+<<<<<<< HEAD
 int processSkyFb_fbu_rows(
         flatbuffers::FlatBufferBuilder& flatb,
         schema_vec& data_schema,
@@ -906,6 +907,15 @@ int processSkyFb_fbu_cols(
         predicate_vec& preds,
         const char* fb,
         const size_t fb_size,
+=======
+int processArrowCol(
+        std::shared_ptr<arrow::Table>* table,
+        schema_vec& tbl_schema,
+        schema_vec& query_schema,
+        predicate_vec& preds,
+        const char* dataptr,
+        const size_t datasz,
+>>>>>>> Changed process arrow function
         std::string& errmsg,
         const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
 
@@ -915,6 +925,10 @@ bool applyPredicates(predicate_vec& pv, sky_rec& rec);
 inline
 bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& table,
                           int element_index);
+inline
+void applyPredicatesArrowCol(predicate_vec& pv,
+                             std::shared_ptr<arrow::Array> col_array,
+                             int col_idx, std::vector<uint32_t>& row_nums);
 
 inline
 bool applyPredicates_fbu_row(predicate_vec& pv, sky_rec_fbu& rec) ;
