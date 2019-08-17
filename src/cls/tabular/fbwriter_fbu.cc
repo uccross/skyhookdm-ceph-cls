@@ -40,8 +40,6 @@ namespace po = boost::program_options ;
 const uint8_t SKYHOOK_VERSION = 1 ;
 const uint8_t SCHEMA_VERSION  = 1 ;
 
-std::string SAVE_DIR = "/mnt/storage1/kat/" ;
-
 std::vector< std::string > parse_csv_str( std::string, char ) ;
 
 struct linedata_t {
@@ -253,6 +251,7 @@ struct cmdline_inputs_t {
 int writeToDisk( librados::bufferlist wrapper_bl, 
                  int bufsz, 
                  std::string target_format, 
+<<<<<<< HEAD
                  std::string target_oid ) {
 <<<<<<< HEAD
   int mode = 0600 ;
@@ -271,6 +270,14 @@ int writeToDisk( librados::bufferlist wrapper_bl, int bufsz, std::string target_
   wrapper_bl.write_file( fname.c_str(), mode ) ;
 =======
   std::string p = SAVE_DIR + fname ;
+=======
+                 std::string target_oid,
+                 std::string SAVE_DIR ) {
+  int mode = 0600 ;
+  std::string fname = "skyhook."+ target_format + "." + target_oid ;
+  std::string p = SAVE_DIR + "/" + fname ;
+  std::cout << "p = " << p << std::endl ;
+>>>>>>> parameterized savedir and fixed disk write bug.
   wrapper_bl.write_file( p.c_str(), mode ) ;
 >>>>>>> adding save directory option for disk writes. hard coded atm.
   printf( "buff size: %d, wrapper_bl size: %d\n", bufsz, wrapper_bl.length() ) ;
@@ -325,7 +332,7 @@ int writeToCeph( librados::bufferlist bl_seq, int bufsz, std::string target_oid,
   return 0 ;
 }
 
-void do_write( cmdline_inputs_t, uint64_t, bool ) ;
+void do_write( cmdline_inputs_t, uint64_t, bool, std::string ) ;
 
 std::vector< std::string > parse_csv_str( std::string instr, char delim ) {
   std::stringstream ss( instr ) ;
@@ -490,6 +497,7 @@ int main( int argc, char *argv[] ) {
   std::string targetoid ;
   std::string targetpool ;
   std::uint64_t numrowsperobj ;
+  std::string savedir ;
 
   po::options_description gen_opts("General options");
   gen_opts.add_options()
@@ -516,7 +524,8 @@ int main( int argc, char *argv[] ) {
 >>>>>>> checkpoint save.
     ("targetoid", po::value<std::string>(&targetoid)->required(), "targetoid")
     ("targetpool", po::value<std::string>(&targetpool)->required(), "targetpool")
-    ("numrowsperobj", po::value<uint64_t>(&numrowsperobj)->required(), "numrowsperobj") ;
+    ("numrowsperobj", po::value<uint64_t>(&numrowsperobj)->required(), "numrowsperobj")
+    ("savedir", po::value<std::string>(&savedir)->required(), "savedir") ;
 
   po::options_description all_opts( "Allowed options" ) ;
   all_opts.add( gen_opts ) ;
@@ -575,7 +584,7 @@ int main( int argc, char *argv[] ) {
   inputs.cols_per_fb       = cols_per_fb ;
 >>>>>>> addressing pr feedback and adding fbu processing to cls_tabular. compiles. queries run w and wo use-cls on flex rows and fbu as expected.
 
-  do_write( inputs, numrowsperobj, debug ) ;
+  do_write( inputs, numrowsperobj, debug, savedir ) ;
 
   return 0 ;
 } // main
@@ -583,7 +592,10 @@ int main( int argc, char *argv[] ) {
 // =========== //
 //   DO WRITE  //
 // =========== //
-void do_write( cmdline_inputs_t inputs, uint64_t numrowsperobj,  bool debug ) {
+void do_write( cmdline_inputs_t inputs, 
+               uint64_t numrowsperobj,  
+               bool debug,
+               std::string SAVE_DIR ) {
 
   if( inputs.debug ) {
 <<<<<<< HEAD
@@ -840,10 +852,11 @@ void do_write( cmdline_inputs_t inputs, uint64_t numrowsperobj,  bool debug ) {
                        inputs.targetoid + "." + std::to_string( writes_counter ), 
                        inputs.targetpool ) ;
         else if( inputs.writeto == "disk" )
-          writeToDisk( wrapper_bl, 
-                       datasz, 
+          writeToDisk( meta_wrapper_bl,
+                       meta_builder_size, 
                        inputs.targetformat, 
-                       inputs.targetoid + "." + std::to_string( writes_counter ) ) ;
+                       inputs.targetoid + "." + std::to_string( writes_counter ),
+                       SAVE_DIR ) ;
         else {
           std::cout << ">>> unrecognized writeto '" << inputs.writeto << "'" << std::endl ;
           exit( 1 ) ;
@@ -1332,10 +1345,11 @@ void do_write( cmdline_inputs_t inputs, uint64_t numrowsperobj,  bool debug ) {
                        inputs.targetoid + "." + std::to_string( writes_counter ), 
                        inputs.targetpool ) ;
         else if( inputs.writeto == "disk" )
-          writeToDisk( bl_seq, 
-                       buffer_size, 
+          writeToDisk( meta_wrapper_bl,
+                       meta_builder_size, 
                        inputs.targetformat, 
-                       inputs.targetoid + "." + std::to_string( writes_counter ) ) ;
+                       inputs.targetoid + "." + std::to_string( writes_counter ),
+                       SAVE_DIR ) ;
         else {
           std::cout << ">>> unrecognized writeto '" << inputs.writeto << "'" << std::endl ;
           exit( 1 ) ;
