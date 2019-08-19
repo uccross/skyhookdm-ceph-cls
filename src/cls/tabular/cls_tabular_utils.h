@@ -907,7 +907,13 @@ int processSkyFb_fbu_cols(
         predicate_vec& preds,
         const char* fb,
         const size_t fb_size,
+<<<<<<< HEAD
 =======
+=======
+        std::string& errmsg,
+        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
+
+>>>>>>> fixed fat finger bork and tested.
 int processArrowCol(
         std::shared_ptr<arrow::Table>* table,
         schema_vec& tbl_schema,
