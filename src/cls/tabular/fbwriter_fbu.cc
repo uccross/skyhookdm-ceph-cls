@@ -676,11 +676,14 @@ void do_write( cmdline_inputs_t inputs,
 
       if( ( line_counter >= rid_start_value ) && 
           ( line_counter <= rid_end_value ) ) {
+        if( debug ) std::cout << "row num : " << (line_counter-rid_start_value) << std::endl ;
         std::pair< std::string, int > lineinfo ;
         lineinfo.first  = line ;
         lineinfo.second = line_counter ;
         str_line_collection.push_back( lineinfo ) ;
       }
+      else if ( line_counter > rid_end_value )
+        break ;
       line_counter++ ;
 
     } // for nrows
@@ -734,6 +737,8 @@ void do_write( cmdline_inputs_t inputs,
       auto l   = str_line_collection[j].first ;
       auto lid = str_line_collection[j].second ;
       linedata_t this_line( schema_datatypes_sdt, l, lid ) ;
+
+      std::cout << "obj_counter = " << inputs.obj_counter << ", lid = " << lid << std::endl ;
 
       // record data
       std::vector< flatbuffers::Offset< void > > data_vect ;
@@ -1054,11 +1059,14 @@ void do_write( cmdline_inputs_t inputs,
 
       if( ( line_counter >= rid_start_value ) && 
           ( line_counter <= rid_end_value ) ) {
+        if( debug ) std::cout << "row num : " << (line_counter-rid_start_value) << std::endl ;
         std::pair< std::string, int > lineinfo ;
         lineinfo.first  = line ;
         lineinfo.second = line_counter ;
         str_line_collection.push_back( lineinfo ) ;
       }
+      else if ( line_counter > rid_end_value )
+        break ;
       line_counter++ ;
 
 <<<<<<< HEAD
