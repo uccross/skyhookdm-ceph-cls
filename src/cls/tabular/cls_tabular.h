@@ -72,13 +72,33 @@ enum SkyFormatType {
     SFT_ARROW,
     SFT_PG_TUPLE,
     SFT_CSV,
+    SFT_PG_BINARY,
     SFT_HDF5,
     SFT_JSON
 };
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> Added enum for data formats supported, added char and uchar case to regex for string types, updated root_table field names.
 =======
+=======
+
+inline int sky_format_type_from_string (std::string type) {
+    std::transform(type.begin(), type.end(), type.begin(), ::toupper);
+    if (type == "SFT_FLATBUF_FLEX_ROW")  return SFT_FLATBUF_FLEX_ROW;
+    if (type == "SFT_FLATBUF_UNION_ROW") return SFT_FLATBUF_UNION_ROW;
+    if (type == "SFT_FLATBUF_UNION_COL") return SFT_FLATBUF_UNION_COL;
+    if (type == "SFT_FLATBUF_CSV_ROW")   return SFT_FLATBUF_CSV_ROW;
+    if (type == "SFT_ARROW")             return SFT_ARROW;
+    if (type == "SFT_PG_TUPLE")          return SFT_PG_TUPLE;
+    if (type == "SFT_CSV")               return SFT_CSV;
+    if (type == "SFT_PG_BINARY")         return SFT_PG_BINARY;
+    if (type == "SFT_HDF5")              return SFT_HDF5;
+    if (type == "SFT_JSON")              return SFT_JSON;
+    return 0;   // format unrecognized
+}
+
+>>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
 enum CompressionType {
     none = 0,
     // lzw,  TODO: placeholder, not yet supported.
