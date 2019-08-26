@@ -3440,7 +3440,7 @@ bool applyPredicates(predicate_vec& pv, sky_rec& rec) {
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
                     colpass = compare(colval,
-                                      static_cast<uint32_t>(predval),
+                                      static_cast<uint64_t>(predval),
                                       p->opType());
                 break;
             }
@@ -3701,7 +3701,7 @@ bool applyPredicates_fbu_cols(predicate_vec& pv, sky_rec& rec, uint64_t col_inde
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
                     colpass = compare(colval,
-                                      static_cast<uint32_t>(predval),
+                                      static_cast<uint64_t>(predval),
                                       p->opType());
                 break;
             }
@@ -3880,7 +3880,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                 if (p->isGlobalAgg())
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
-                    colpass = compare(colval,predval,p->opType());
+                    colpass = compare(static_cast<uint64_t>(colval),static_cast<uint64_t>(predval),p->opType());
                 break;
             }
 
@@ -3970,7 +3970,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
                     colpass = compare(colval,
-                                      static_cast<uint32_t>(predval),
+                                      static_cast<uint64_t>(predval),
                                       p->opType());
                 break;
             }
@@ -4495,7 +4495,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     uint32_t colval =                                   \
                         std::static_pointer_cast<arrow::UInt32Array>(col_array)->Value(row_idx);
                     uint32_t predval = p->Val();
-                    if (compare(colval, static_cast<uint32_t>(predval), p->opType()))
+                    if (compare(colval, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 }
@@ -4646,27 +4646,6 @@ bool compare(const int64_t& val1, const int64_t& val2, const int& op) {
         case SOT_logical_nor: return !(val1 || val2);
         case SOT_logical_nand: return !(val1 && val2);
         case SOT_logical_xor: return (val1 || val2) && (val1 != val2);
-        default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
-    }
-    return false;  // should be unreachable
-}
-
-bool compare(const uint32_t& val1, const uint32_t& val2, const int& op) {
-    switch (op) {
-        case SOT_lt: return val1 < val2;
-        case SOT_gt: return val1 > val2;
-        case SOT_eq: return val1 == val2;
-        case SOT_ne: return val1 != val2;
-        case SOT_leq: return val1 <= val2;
-        case SOT_geq: return val1 >= val2;
-        case SOT_logical_or: return val1 || val2;  // for predicate chaining
-        case SOT_logical_and: return val1 && val2;
-        case SOT_logical_not: return !val1 && !val2;  // not either, i.e., nor
-        case SOT_logical_nor: return !(val1 || val2);
-        case SOT_logical_nand: return !(val1 && val2);
-        case SOT_logical_xor: return (val1 || val2) && (val1 != val2);
-        case SOT_bitwise_and: return val1 & val2;
-        case SOT_bitwise_or: return val1 | val2;
         default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
     }
     return false;  // should be unreachable
@@ -6119,7 +6098,7 @@ int transform_fbxrows_to_fbucols(const char* fb,
     sky_root root = getSkyRoot(fb, fb_size);
     schema_vec sc = schemaFromString(root.data_schema);
     delete_vector del_vec = root.delete_vec;
-    uint32_t nrows = root.nrows;
+    //uint32_t nrows = root.nrows;
 
     return errcode;
 } // transform_fbxrows_to_fbucols
