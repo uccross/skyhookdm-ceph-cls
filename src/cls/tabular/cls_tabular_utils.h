@@ -695,6 +695,7 @@ struct col_table_fbu {
     col_fbu data_fbu_col;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     col_table_fbu(int64_t _CID, 
                    nullbits_vector _nullbits, 
                    std::vector< uint64_t > _cols_rids, 
@@ -704,6 +705,12 @@ struct col_table_fbu {
                   nullbits_vector _nullbits,
                   col_fbu _data_fbu_col) :
 >>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
+=======
+    col_table_fbu(int64_t _CID,
+                  nullbits_vector _nullbits,
+                  std::vector< uint64_t > _cols_rids,
+                  col_fbu _data_fbu_col) :
+>>>>>>> Output Arrow results as Postgres binary format.
         CID(_CID),
         nullbits(_nullbits),
         cols_rids(_cols_rids),
@@ -871,6 +878,14 @@ long long int printArrowbufRowAsCsv(
 
 // postgres binary fstream format
 long long int printFlatbufFlexRowAsBinary(
+        const char* dataptr,
+        const size_t datasz,
+        bool print_header,
+        bool print_verbose,
+        long long int max_to_print);
+
+// postgres binary fstream format
+long long int printArrowbufRowAsBinary(
         const char* dataptr,
         const size_t datasz,
         bool print_header,
