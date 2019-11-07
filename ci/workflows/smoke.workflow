@@ -13,7 +13,7 @@ action "build skyhook cls" {
 
 action "download test data" {
   needs = "build skyhook cls"
-  uses = "actions/bin/curl@master"
+  uses = "popperized/bin/curl@master"
   runs = ["sh", "-c", "ci/scripts/download-test-data.sh"]
 }
 
@@ -56,13 +56,13 @@ action "run tests" {
 >>>>>>> Use ceph builder image
 action "build ceph image" {
   needs = "download test data"
-  uses = "actions/docker/cli@master"
+  uses = "popperized/docker/cli@master"
   args = "build -t popperized/ceph:luminous ci/docker"
 }
 
 action "run tests" {
   needs = "build ceph image"
-  uses = "actions/docker/cli@master"
+  uses = "popperized/docker/cli@master"
   runs = [
     "sh", "-c",
 <<<<<<< HEAD
