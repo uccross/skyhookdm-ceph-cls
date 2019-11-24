@@ -283,6 +283,7 @@ target_link_libraries(cls_tabular re2 arrow parquet Boost::date_time)
 set_target_properties(cls_tabular PROPERTIES VERSION "1.0.0" SOVERSION "1")
 install(TARGETS cls_tabular DESTINATION ${cls_dir})
 
+<<<<<<< HEAD
 # skyhook fbwriter
 add_executable(fbwriter tabular/fbwriter.cc  tabular/cls_tabular_utils.cc)
 target_link_libraries(fbwriter librados global re2 arrow parquet)
@@ -329,6 +330,12 @@ install(TARGETS fbwriter_skyroot DESTINATION bin)
 =======
 =======
 >>>>>>> added fbwriter_fbu w no fb_meta support.
+=======
+# skyhook flatflex writer
+add_executable(sky_tabular_flatflex_writer tabular/sky_tabular_flatflex_writer.cc  tabular/cls_tabular_utils.cc)
+target_link_libraries(sky_tabular_flatflex_writer librados global re2 arrow parquet)
+install(TARGETS sky_tabular_flatflex_writer DESTINATION bin)
+>>>>>>> Rename fbwriter for tabular_flatflex format, for uniformity with new hep_nano_aod arrow format writer.
 
 # skyhook fbwriter_fbu
 add_executable(fbwriter_fbu tabular/fbwriter_fbu.cc tabular/cls_tabular_utils.cc)
