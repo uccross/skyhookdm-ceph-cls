@@ -73,10 +73,10 @@ enum SkyFormatType {
     SFT_PARQUET,
     SFT_PG_TUPLE,
     SFT_CSV,
+    SFT_JSON,
     SFT_PG_BINARY,
     SFT_PYARROW_BINARY,
     SFT_HDF5,
-    SFT_JSON,
     SFT_EXAMPLE_FORMAT
 };
 
@@ -722,7 +722,7 @@ struct col_stats {
 };
 WRITE_CLASS_ENCODER(col_stats)
 
-// Example struct to store and serialize read/write info 
+// Example struct to store and serialize read/write info
 // for custom cls class methods
 struct inbl_sample_op {
 
