@@ -891,7 +891,7 @@ long long int printArrowbufRowAsCsv(
         long long int max_to_print);
 
 // postgres binary fstream format
-long long int printFlatbufFlexRowAsBinary(
+long long int printFlatbufFlexRowAsPGBinary(
         const char* dataptr,
         const size_t datasz,
         bool print_header,
@@ -899,7 +899,7 @@ long long int printFlatbufFlexRowAsBinary(
         long long int max_to_print);
 
 // postgres binary fstream format
-long long int printArrowbufRowAsBinary(
+long long int printArrowbufRowAsPGBinary(
         const char* dataptr,
         const size_t datasz,
         bool print_header,
