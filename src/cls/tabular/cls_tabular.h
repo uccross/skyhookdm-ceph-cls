@@ -36,7 +36,7 @@ enum layout_type_t {
 // metadata corresponding to struct sky_root table
 >>>>>>> Add fb_meta struct as wrapper around all underlying supported data formats stored on disk.
 enum arrow_metadata_t {
-    METADATA_SKYHOOK_VERSION,
+    METADATA_SKYHOOK_VERSION = 0,
     METADATA_DATA_SCHEMA_VERSION,
     METADATA_DATA_STRUCTURE_VERSION,
     METADATA_DATA_FORMAT_TYPE,
@@ -45,6 +45,19 @@ enum arrow_metadata_t {
     METADATA_TABLE_NAME,
     METADATA_NUM_ROWS
 };
+
+enum pyarrow_metadata_t {
+    PYARROW_METADATA_DATA_SCHEMA = 0,
+};
+
+inline const char* ToString(pyarrow_metadata_t m)
+{
+    switch (m)
+    {
+        case PYARROW_METADATA_DATA_SCHEMA:      return "data_schema";
+        default:                                return "[Unknown Metadata]";
+    }
+}
 
 inline const char* ToString(arrow_metadata_t m)
 {

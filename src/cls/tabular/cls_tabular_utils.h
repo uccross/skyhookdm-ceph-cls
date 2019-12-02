@@ -73,7 +73,11 @@ enum TablesErrCodes {
     SkyFormatTypeNotRecognized,
     SkyOutputBinaryNotImplemented,
     ArrowStatusErr,
-    UnsupportedNumKeyCols
+    UnsupportedNumKeyCols,
+    NoInStorageProcessingRequired,
+    NoMatchingDataFound,
+    ClsResultCodeTrue,
+    ClsResultCodeFalse
 };
 
 // skyhook data types, as supported by underlying data format
@@ -1023,6 +1027,16 @@ int processArrowCol(
         const char* dataptr,
         const size_t datasz,
 >>>>>>> Changed process arrow function
+        std::string& errmsg,
+        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
+
+int processArrowColHEP(
+        std::shared_ptr<arrow::Table>* table,
+        schema_vec& tbl_schema,
+        schema_vec& query_schema,
+        predicate_vec& preds,
+        const char* dataptr,
+        const size_t datasz,
         std::string& errmsg,
         const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
 
