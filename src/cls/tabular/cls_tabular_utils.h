@@ -79,11 +79,17 @@ enum TablesErrCodes {
     ClsResultCodeTrue,
     ClsResultCodeFalse,
     EINVALID_INTERMEDIATE_FORMAT,
+<<<<<<< HEAD
     EINVALID_OUTPUT_FORMAT,
     EINVALID_TRANSFORM_FORMAT,
     EDECODE_BUFFERLIST_FAILURE,
     ECLIENTSIDE_PROCESSING_FAILURE,
     ESTORAGESIDE_PROCESSING_FAILURE
+=======
+    EINVALID_CLIENT_FORMAT,
+    EINVALID_TRANSFORM_FORMAT,
+    EDECODE_BUFFERLIST_FAILURE,
+>>>>>>> Add more error codes for intermediate and output format.
 };
 
 // skyhook data types, as supported by underlying data format
