@@ -1036,10 +1036,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     bufferlist result_bl;  // result set to be returned to client.
     query_op op;
 
-    CLS_LOG(20, "exec_query_op begin");
-    CLS_LOG(20, "exec_query_op decoding op begin");
-    //CLS_LOG(20, "exec_query_op decoding op next", std::to_string(result_bl.length()).c_str());
-
     // extract the query op to get the query request params
     try {
         bufferlist::iterator it = in->begin();
@@ -1049,6 +1045,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         return -EINVAL;
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     // remove newlines for cls logging purpose
     std::string msg = op.toString();
@@ -1066,6 +1063,16 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
     CLS_LOG(20, "exec_query_op op.toString()=%s", msg.c_str());
 >>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
+=======
+    // remove newlines for cls logging purpose
+    std::string msg = op.toString();
+    std::replace(msg.begin(), msg.end(), '\n', ' ');
+
+    if (op.debug) {
+        CLS_LOG(20, "exec_query_op decoded successfully");
+        CLS_LOG(20, "exec_query_op op.toString()=%s", op.toString().c_str());
+    }
+>>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 
     if (op.query == "flatbuf") {
 
@@ -1633,6 +1640,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
                     // add this result into our results bl
 <<<<<<< HEAD
+<<<<<<< HEAD
                     ::encode(meta_bl, result_bl);
                     delete meta_builder;
 
@@ -1652,6 +1660,10 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                     result_bl = fbmeta_bl;
                     delete fbmeta_builder;
 >>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
+=======
+                    result_bl = fbmeta_bl;
+                    delete fbmeta_builder;
+>>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
                 }
                 eval_ns += getns() - start;
             }
@@ -1659,19 +1671,28 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     if (op.debug)
         CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
 =======
   CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
 >>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
+=======
+    if (op.debug)
+        CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
+>>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
   // store timings and result set into output BL
   //~ ::encode(read_ns, *out);
   //~ ::encode(eval_ns, *out);
   //~ ::encode(rows_processed, *out);
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
 >>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
+=======
+
+>>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
   ::encode(result_bl, *out);
 
   return 0;

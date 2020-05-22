@@ -86,6 +86,7 @@ enum TablesErrCodes {
     EDECODE_BUFFERLIST_FAILURE,
     ECLIENTSIDE_PROCESSING_FAILURE,
     ESTORAGESIDE_PROCESSING_FAILURE
+<<<<<<< HEAD
 =======
     EINVALID_CLIENT_FORMAT,
 =======
@@ -94,6 +95,8 @@ enum TablesErrCodes {
     EINVALID_TRANSFORM_FORMAT,
     EDECODE_BUFFERLIST_FAILURE,
 >>>>>>> Add more error codes for intermediate and output format.
+=======
+>>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 };
 
 // skyhook data types, as supported by underlying data format
