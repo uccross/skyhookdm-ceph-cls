@@ -19,8 +19,7 @@ cd skyhookdm-ceph
 ## build the builder
 
 ```bash
-docker build -t builder -f src/cls/tabular/Dockerfile.builder
-src/cls/tabular/
+docker build -t builder -f src/cls/tabular/Dockerfile.builder src/cls/tabular/
 ```
 
 ## build the library
