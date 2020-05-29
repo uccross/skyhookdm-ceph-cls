@@ -17,6 +17,7 @@
 #include <type_traits>
 #include <bitset>
 
+#include <include/types.h>
 #include <errno.h>
 #include <time.h>
 #include <boost/algorithm/string/classification.hpp> // for boost::is_any_of
@@ -30,8 +31,9 @@
 #include <arrow/ipc/writer.h>
 #include <arrow/ipc/reader.h>
 
-#include <re2/re2.h>
-#include <rados/objclass.h>
+#include "re2/re2.h"
+#include "objclass/objclass.h"
+#include "rapidjson/document.h"
 
 #include "cls_tabular.h"
 #include "flatbuffers/flexbuffers.h"

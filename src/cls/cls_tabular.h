@@ -12,15 +12,8 @@
 #ifndef CLS_TABULAR_H
 #define CLS_TABULAR_H
 
-#include <algorithm>
-#include <string>
+#include <include/types.h>
 
-#include <rados/objclass.h>
-#include <rados/buffer.h>
-
-#include <rados/>
-
-using ceph::bufferlist;
 
 void cls_log_message(std::string msg, bool is_err, int log_level);
 
