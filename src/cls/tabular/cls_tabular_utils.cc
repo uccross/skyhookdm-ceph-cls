@@ -10,1437 +10,681 @@
 
 
 #include "cls_tabular_utils.h"
+#include "cls_tabular_processing.h"
 
 
 namespace Tables {
 
-/*
- * Function: processArrow
- * Description: Process the input arrow table rowwise for the corresponding input
- *              query and encapsulate the output in an output arrow table.
- * @param[out] table       : Ouput arrow table
- * @param[in] tbl_schema   : Schema of an input table
- * @param[in] query_schema : Schema of an query
- * @param[in] preds        : Predicates for the query
- * @param[in] dataptr      : Input table in the form of char array
- * @param[in] datasz       : Size of char array
- * @param[out] errmsg      : Error message
- * @param[out] row_nums    : Specified rows to be processed
- *
- * Return Value: error code
- */
 
-int processArrow(
-    std::shared_ptr<arrow::Table>* table,
-    schema_vec& tbl_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* dataptr,
-    const size_t datasz,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    int processed_rows = 0;
-    int num_cols = std::distance(tbl_schema.begin(), tbl_schema.end());
-    auto pool = arrow::default_memory_pool();
-    std::vector<arrow::ArrayBuilder *> builder_list;
-    std::vector<std::shared_ptr<arrow::Array>> array_list;
-    std::vector<std::shared_ptr<arrow::Field>> output_tbl_fields_vec;
-    std::shared_ptr<arrow::Buffer> buffer = arrow::MutableBuffer::Wrap(reinterpret_cast<uint8_t*>(const_cast<char*>(dataptr)), datasz);
-    std::shared_ptr<arrow::Table> input_table, temp_table;
-
-    // Get input table from dataptr
-    extract_arrow_from_buffer(&input_table, buffer);
-
-    auto schema = input_table->schema();
-    auto metadata = schema->metadata();
-
-    // Get number of rows to be processed
-    bool process_all_rows = true;
-    uint32_t nrows = atoi(metadata->value(METADATA_NUM_ROWS).c_str());
-    if (!row_nums.empty()) {
-        process_all_rows = false;  // process specified row numbers only
-        nrows = row_nums.size();
-    }
-
-    // identify the max col idx, to prevent flexbuf vector oob error
-    int col_idx_max = -1;
-    for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
-        if (it->idx > col_idx_max)
-            col_idx_max = it->idx;
-    }
-
-    // Iterate through query schema vector to get the details of columns i.e name and type.
-    // Also, get the builder arrays required for each data type
-    for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
-        col_info col = *it;
-
-        // Create the array builders for respective datatypes. Use these array
-        // builders to store data to array vectors. These array vectors holds the
-        // actual column values. Also, add the details of column (Name and Datatype)
-        switch(col.type) {
-
-            case SDT_BOOL: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::BooleanBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::boolean()));
-                break;
-            }
-            case SDT_INT8: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
-                break;
-            }
-            case SDT_INT16: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int16Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int16()));
-                break;
-            }
-            case SDT_INT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int32Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int32()));
-                break;
-            }
-            case SDT_INT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int64Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int64()));
-                break;
-            }
-            case SDT_UINT8: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
-                break;
-            }
-            case SDT_UINT16: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt16Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint16()));
-                break;
-            }
-            case SDT_UINT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt32Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint32()));
-                break;
-            }
-            case SDT_UINT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt64Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint64()));
-                break;
-            }
-            case SDT_FLOAT: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::FloatBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float32()));
-                break;
-            }
-            case SDT_DOUBLE: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::DoubleBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float64()));
-                break;
-            }
-            case SDT_CHAR: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
-                break;
-            }
-            case SDT_UCHAR: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
-                break;
-            }
-            case SDT_DATE:
-            case SDT_STRING: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::StringBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::utf8()));
-                break;
-            }
-            case SDT_JAGGEDARRAY_BOOL: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::BooleanBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::boolean())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_INT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::Int32Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int32())));
-                break;
-            }
-             case SDT_JAGGEDARRAY_UINT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::UInt32Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint32())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_INT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::Int64Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int64())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_UINT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::UInt64Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint64())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_FLOAT: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::FloatBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float32())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_DOUBLE: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::DoubleBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float64())));
-                break;
-            }
-            default: {
-                errcode = TablesErrCodes::UnsupportedSkyDataType;
-                errmsg.append("ERROR processArrow()");
-                return errcode;
-            }
-        }
-    }
-
-    for (uint32_t i = 0; i < nrows; i++) {
-
-        // process row i or the specified row number
-        uint32_t rnum = 0;
-        if (process_all_rows) rnum = i;
-        else rnum = row_nums[i];
-        if (rnum > nrows) {
-            errmsg += "ERROR: rnum(" + std::to_string(rnum) +
-                      ") > nrows(" + to_string(nrows) + ")";
-            return RowIndexOOB;
-        }
-
-        // skip dead rows.
-        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(0);
-        if (std::static_pointer_cast<arrow::BooleanArray>(delvec_chunk)->Value(i) == true) continue;
-
-        // Apply predicates
-        if (!preds.empty()) {
-            bool pass = applyPredicatesArrow(preds, input_table, i);
-            if (!pass) continue;  // skip non matching rows.
-        }
-        processed_rows++;
-
-        // iter over the query schema and add the values from input table
-        // to output table
-        for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
-            col_info col = *it;
-            auto builder = builder_list[std::distance(query_schema.begin(), it)];
-
-            auto processing_chunk = input_table->column(col.idx)->chunk(0);
-
-            if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
-                errcode = TablesErrCodes::RequestedColIndexOOB;
-                errmsg.append("ERROR processArrow()");
-                return errcode;
-            } else {
-                if (col.nullable) {  // check nullbit
-                    if (processing_chunk->IsNull(i)) {
-                        builder->AppendNull();
-                        continue;
-                    }
-                }
-
-                // Append data from input tbale to the respective data type builders
-                switch(col.type) {
-
-                case SDT_BOOL:
-                    static_cast<arrow::BooleanBuilder *>(builder)->Append(std::static_pointer_cast<arrow::BooleanArray>(processing_chunk)->Value(i));
-                    break;
-                case SDT_INT8:
-                    static_cast<arrow::Int8Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_INT16:
-                    static_cast<arrow::Int16Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int16Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_INT32:
-                    static_cast<arrow::Int32Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int32Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_INT64:
-                    static_cast<arrow::Int64Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int64Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_UINT8:
-                    static_cast<arrow::UInt8Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_UINT16:
-                    static_cast<arrow::UInt16Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt16Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_UINT32:
-                    static_cast<arrow::UInt32Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt32Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_UINT64:
-                    static_cast<arrow::UInt64Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt64Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_FLOAT:
-                    static_cast<arrow::FloatBuilder *>(builder)->Append(std::static_pointer_cast<arrow::FloatArray>(processing_chunk)->Value(i));
-                    break;
-                case SDT_DOUBLE:
-                    static_cast<arrow::DoubleBuilder *>(builder)->Append(std::static_pointer_cast<arrow::DoubleArray>(processing_chunk)->Value(i));
-                    break;
-                case SDT_CHAR:
-                    static_cast<arrow::Int8Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_UCHAR:
-                    static_cast<arrow::UInt8Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(i));
-                    break;
-                case SDT_DATE:
-                case SDT_STRING:
-                    static_cast<arrow::StringBuilder *>(builder)->Append(std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(i));
-                    break;
-                default: {
-                    errcode = TablesErrCodes::UnsupportedSkyDataType;
-                    errmsg.append("ERROR processArrow()");
-                    return errcode;
-                }
-                }
-            }
-        }
-    }
-
-    // Finalize the chunks holding the data
-    for (auto it = builder_list.begin(); it != builder_list.end(); ++it) {
-        auto builder = *it;
-        std::shared_ptr<arrow::Array> chunk;
-        builder->Finish(&chunk);
-        array_list.push_back(chunk);
-        delete builder;
-    }
-
-    std::shared_ptr<arrow::KeyValueMetadata> output_tbl_metadata (new arrow::KeyValueMetadata);
-    // Add skyhook metadata to arrow metadata.
-    output_tbl_metadata->Append(ToString(METADATA_SKYHOOK_VERSION),
-                          metadata->value(METADATA_SKYHOOK_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA_VERSION),
-                          metadata->value(METADATA_DATA_SCHEMA_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_STRUCTURE_VERSION),
-                          metadata->value(METADATA_DATA_STRUCTURE_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_FORMAT_TYPE),
-                          metadata->value(METADATA_DATA_FORMAT_TYPE));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA),
-                          schemaToString(query_schema));
-    output_tbl_metadata->Append(ToString(METADATA_DB_SCHEMA),
-                          metadata->value(METADATA_DB_SCHEMA));
-    output_tbl_metadata->Append(ToString(METADATA_TABLE_NAME),
-                          metadata->value(METADATA_TABLE_NAME));
-    output_tbl_metadata->Append(ToString(METADATA_NUM_ROWS),
-                          std::to_string(processed_rows));
-
-    // Generate schema from schema vector and add the metadata
-    schema = std::make_shared<arrow::Schema>(output_tbl_fields_vec, output_tbl_metadata);
-
-    // Finally, create a arrow table from schema and array vector
-    *table = arrow::Table::Make(schema, array_list);
-    return errcode;
+// simple converstion from schema to its str representation.
+std::string schemaToString(schema_vec schema) {
+    std::string s;
+    for (auto it = schema.begin(); it != schema.end(); ++it)
+        s.append(it->toString() + "\n");
+    return s;
 }
 
-/*
- * Function: processArrowCol
- * Description: Process the input arrow table columnwise for the corresponding input
- *              query and encapsulate the output in an output arrow table.
- * @param[out] table       : Ouput arrow table
- * @param[in] tbl_schema   : Schema of an input table
- * @param[in] query_schema : Schema of an query
- * @param[in] preds        : Predicates for the query
- * @param[in] dataptr      : Input table in the form of char array
- * @param[in] datasz       : Size of char array
- * @param[out] errmsg      : Error message
- * @param[out] row_nums    : Specified rows to be processed
- *
- * Return Value: error code
- */
-int processArrowCol(
-    std::shared_ptr<arrow::Table>* table,
-    schema_vec& tbl_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* dataptr,
-    const size_t datasz,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    int processed_rows = 0;
-    int num_cols = std::distance(tbl_schema.begin(), tbl_schema.end());
-    auto pool = arrow::default_memory_pool();
-    std::vector<arrow::ArrayBuilder *> builder_list;
-    std::vector<std::shared_ptr<arrow::Array>> array_list;
-    std::vector<std::shared_ptr<arrow::Field>> output_tbl_fields_vec;
-    std::shared_ptr<arrow::Buffer> buffer =                             \
-        arrow::MutableBuffer::Wrap(reinterpret_cast<uint8_t*>(const_cast<char*>(dataptr)), datasz);
-    std::shared_ptr<arrow::Table> input_table, temp_table;
-    std::vector<uint32_t> result_rows;
-
-    // Get input table from dataptr
-    extract_arrow_from_buffer(&input_table, buffer);
-
-    auto schema = input_table->schema();
-    auto metadata = schema->metadata();
-    uint32_t nrows = atoi(metadata->value(METADATA_NUM_ROWS).c_str());
-
-    // TODO: should we verify these are the same as nrows
-    // int64_t nrows_from_api = input_table->num_rows();
-
-    // Get number of rows to be processed
-    if (!row_nums.empty()) {
-        result_rows = row_nums;
-    }
-
-    // identify the max col idx, to prevent flexbuf vector oob error
-    int col_idx_max = -1;
-    for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
-        if (it->idx > col_idx_max)
-            col_idx_max = it->idx;
-    }
-
-    // Apply predicates to all the columns and get the rows which
-    // satifies the condition
-    if (!preds.empty()) {
-        // Iterate through each column in print the data inside it
-        for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
-            col_info col = *it;
-
-            applyPredicatesArrowCol(preds,
-                                    input_table->column(col.idx)->chunk(0),
-                                    col.idx,
-                                    result_rows);
-        }
-        nrows = result_rows.size();
-    }
-
-    // At this point we have rows which satisfied the required predicates.
-    // Now create the output arrow table from input table.
-
-    // Iterate through query schema vector to get the details of columns i.e name and type.
-    // Also, get the builder arrays required for each data type
-    for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
-        col_info col = *it;
-
-        // Create the array builders for respective datatypes. Use these array
-        // builders to store data to array vectors. These array vectors holds the
-        // actual column values. Also, add the details of column (Name and Datatype)
-        switch(col.type) {
-
-            case SDT_BOOL: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::BooleanBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::boolean()));
-                break;
-            }
-            case SDT_INT8: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
-                break;
-            }
-            case SDT_INT16: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int16Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int16()));
-                break;
-            }
-            case SDT_INT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int32Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int32()));
-                break;
-            }
-            case SDT_INT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int64Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int64()));
-                break;
-            }
-            case SDT_UINT8: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
-                break;
-            }
-            case SDT_UINT16: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt16Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint16()));
-                break;
-            }
-            case SDT_UINT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt32Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint32()));
-                break;
-            }
-            case SDT_UINT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt64Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint64()));
-                break;
-            }
-            case SDT_FLOAT: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::FloatBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float32()));
-                break;
-            }
-            case SDT_DOUBLE: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::DoubleBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float64()));
-                break;
-            }
-            case SDT_CHAR: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::Int8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
-                break;
-            }
-            case SDT_UCHAR: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::UInt8Builder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
-                break;
-            }
-            case SDT_DATE:
-            case SDT_STRING: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::StringBuilder(pool));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::utf8()));
-                break;
-            }
-            case SDT_JAGGEDARRAY_BOOL: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::BooleanBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::boolean())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_INT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::Int32Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int32())));
-                break;
-            }
-             case SDT_JAGGEDARRAY_UINT32: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::UInt32Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint32())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_INT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::Int64Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int64())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_UINT64: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::UInt64Builder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint64())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_FLOAT: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::FloatBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float32())));
-                break;
-            }
-            case SDT_JAGGEDARRAY_DOUBLE: {
-                auto ptr = std::unique_ptr<arrow::ArrayBuilder>(new arrow::ListBuilder(pool,std::make_shared<arrow::DoubleBuilder>(pool)));
-                builder_list.emplace_back(ptr.get());
-                ptr.release();
-                output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float64())));
-                break;
-            }
-            default: {
-                errcode = TablesErrCodes::UnsupportedSkyDataType;
-                errmsg.append("ERROR processArrow()");
-                return errcode;
-            }
+schema_vec schemaFromColNames(schema_vec &current_schema,
+                              std::string col_names) {
+    schema_vec schema;
+    boost::trim(col_names);
+    if (col_names == PROJECT_DEFAULT) {
+        for (auto it=current_schema.begin(); it!=current_schema.end(); ++it) {
+            schema.push_back(*it);
         }
     }
+    else if (col_names == RID_INDEX) {
+        col_info ci(RID_COL_INDEX, SDT_UINT64, true, false, RID_INDEX);
+        schema.push_back(ci);
 
-    // Copy values from input table rows to the output table rows
-    for (uint32_t i = 0; i < nrows; i++) {
-
-        uint32_t rnum = i;
-        if (!preds.empty())
-            rnum = result_rows[i];
-
-        // skip dead rows.
-        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(0);
-        if (std::static_pointer_cast<arrow::BooleanArray>(delvec_chunk)->Value(rnum) == true) continue;
-
-        processed_rows++;
-
-        // iter over the query schema and add the values from input table
-        // to output table
-        for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
-            col_info col = *it;
-            auto builder = builder_list[std::distance(query_schema.begin(), it)];
-
-            auto processing_chunk = input_table->column(col.idx)->chunk(0);
-
-            if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
-                errcode = TablesErrCodes::RequestedColIndexOOB;
-                errmsg.append("ERROR processArrowCol()");
-                return errcode;
-            } else {
-                if (col.nullable) {  // check nullbit
-                    if (processing_chunk->IsNull(rnum)) {
-                        builder->AppendNull();
-                        continue;
-                    }
-                }
-
-                // Append data from input tbale to the respective data type builders
-                switch(col.type) {
-
-                    case SDT_BOOL:
-                        static_cast<arrow::BooleanBuilder *>(builder)->Append(std::static_pointer_cast<arrow::BooleanArray>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_INT8:
-                        static_cast<arrow::Int8Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_INT16:
-                        static_cast<arrow::Int16Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int16Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_INT32:
-                        static_cast<arrow::Int32Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int32Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_INT64:
-                        static_cast<arrow::Int64Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int64Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_UINT8:
-                        static_cast<arrow::UInt8Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_UINT16:
-                        static_cast<arrow::UInt16Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt16Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_UINT32:
-                        static_cast<arrow::UInt32Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt32Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_UINT64:
-                        static_cast<arrow::UInt64Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt64Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_FLOAT:
-                        static_cast<arrow::FloatBuilder *>(builder)->Append(std::static_pointer_cast<arrow::FloatArray>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_DOUBLE:
-                        static_cast<arrow::DoubleBuilder *>(builder)->Append(std::static_pointer_cast<arrow::DoubleArray>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_CHAR:
-                        static_cast<arrow::Int8Builder *>(builder)->Append(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_UCHAR:
-                        static_cast<arrow::UInt8Builder *>(builder)->Append(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rnum));
-                        break;
-                    case SDT_DATE:
-                    case SDT_STRING:
-                        static_cast<arrow::StringBuilder *>(builder)->Append(std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rnum));
-                        break;
-                    case SDT_JAGGEDARRAY_FLOAT: {
-                        // advance to the start of a new list row
-                        static_cast<arrow::ListBuilder *>(builder)->Append();
-
-                        // extract list builder as int32 builder
-                        arrow::ListBuilder* lb = static_cast<arrow::ListBuilder *>(builder);
-                        arrow::Int32Builder* ib = static_cast<arrow::Int32Builder *>(lb->value_builder());
-
-                        // TODO: extract prev values and append to ib
-                        // ib->AppendValues(vector.data(), vector.size());
-                        break;
-                    }
-                    default: {
-                        errcode = TablesErrCodes::UnsupportedSkyDataType;
-                        errmsg.append("ERROR processArrow()");
-                        return errcode;
-                    }
-                }
-            }
-        }
-    }
-
-    // Finalize the chunks holding the data
-    for (auto it = builder_list.begin(); it != builder_list.end(); ++it) {
-        auto builder = *it;
-        std::shared_ptr<arrow::Array> chunk;
-        builder->Finish(&chunk);
-        array_list.push_back(chunk);
-        delete builder;
-    }
-
-    // Add skyhook metadata to arrow metadata.
-    std::shared_ptr<arrow::KeyValueMetadata> output_tbl_metadata (new arrow::KeyValueMetadata);
-    output_tbl_metadata->Append(ToString(METADATA_SKYHOOK_VERSION),
-                                metadata->value(METADATA_SKYHOOK_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA_VERSION),
-                                metadata->value(METADATA_DATA_SCHEMA_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_STRUCTURE_VERSION),
-                                metadata->value(METADATA_DATA_STRUCTURE_VERSION));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_FORMAT_TYPE),
-                                metadata->value(METADATA_DATA_FORMAT_TYPE));
-    output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA),
-                                schemaToString(query_schema));
-    output_tbl_metadata->Append(ToString(METADATA_DB_SCHEMA),
-                                metadata->value(METADATA_DB_SCHEMA));
-    output_tbl_metadata->Append(ToString(METADATA_TABLE_NAME),
-                                metadata->value(METADATA_TABLE_NAME));
-    output_tbl_metadata->Append(ToString(METADATA_NUM_ROWS),
-                                std::to_string(processed_rows));
-
-    // Generate schema from schema vector and add the metadata
-    schema = std::make_shared<arrow::Schema>(output_tbl_fields_vec, output_tbl_metadata);
-
-    // Finally, create a arrow table from schema and array vector
-    *table = arrow::Table::Make(schema, array_list);
-
-    return errcode;
-}
-
-
-int processArrowColHEP(
-    std::shared_ptr<arrow::Table>* table,
-    schema_vec& tbl_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* dataptr,
-    const size_t datasz,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    //auto pool = arrow::default_memory_pool();
-    std::vector<arrow::ArrayBuilder *> builder_list;
-    std::vector<std::shared_ptr<arrow::Array>> array_list;
-    std::vector<std::shared_ptr<arrow::Field>> output_tbl_fields_vec;
-    std::shared_ptr<arrow::Buffer> buffer = \
-        arrow::MutableBuffer::Wrap(reinterpret_cast<uint8_t*>(const_cast<char*>(dataptr)), datasz);
-    std::shared_ptr<arrow::Table> input_table, temp_table;
-    std::vector<uint32_t> result_rows;
-
-    // Get input table from dataptr
-    extract_arrow_from_buffer(&input_table, buffer);
-
-    auto schema = input_table->schema();
-    auto metadata = schema->metadata();
-    int64_t nrows = input_table->num_rows();
-
-    // convert to skyhook structs
-    schema_vec dschema = schemaFromString(metadata->value(PYARROW_METADATA_DATA_SCHEMA));
-    schema_vec qschema = query_schema;
-
-    // only used for logging in cls_tabular
-    std::string dschema_str = schemaToString(dschema);
-    std::string qschema_str = schemaToString(qschema);
-    std::replace(dschema_str.begin(), dschema_str.end(), '\n', ';');
-    std::replace(qschema_str.begin(), qschema_str.end(), '\n', ';');
-    errmsg += ("processArrowColHEP:nrows_from_api=" + std::to_string(nrows) + "; ");
-    errmsg += ("dschema=" + dschema_str + "; ");
-    errmsg += ("qschema=" + qschema_str + "; " );
-
-    // if all query cols and data cols are same in same order, and no
-    // predicates, then no processing required
-    bool fastpath = false;
-    if (preds.empty()) {
-        if (qschema.size() == dschema.size()) {
-            fastpath = true;
-            for (unsigned i = 0; i< qschema.size(); i++)
-                fastpath &= compareColInfo(dschema[i], qschema[i]);
-        }
-    }
-
-    // can we return the original data unprocessed
-    if (fastpath) {
-        errmsg += " fastpath=true; ";
-        errcode = TablesErrCodes::NoInStorageProcessingRequired;
     }
     else {
-        errmsg += " fastpath=false; ";
-        errcode = TablesErrCodes::NoMatchingDataFound;
+        vector<std::string> cols;
+        boost::split(cols, col_names, boost::is_any_of(","),
+                     boost::token_compress_on);
+
+        // build return schema elems in order of colnames provided.
+        for (auto it=cols.begin(); it!=cols.end(); ++it) {
+            for (auto it2=current_schema.begin();
+                      it2!=current_schema.end(); ++it2) {
+                if (it2->compareName(*it))
+                    schema.push_back(*it2);
+            }
+        }
     }
-    return errcode;
+    return schema;
 }
 
+// schema string expects the format in cls_tabular_utils.h
+// see lineitem_test_schema
+schema_vec schemaFromString(std::string schema_string) {
 
-int processSkyFb(
-    flatbuffers::FlatBufferBuilder& flatbldr,
-    schema_vec& data_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* fb,
-    const size_t fb_size,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    delete_vector dead_rows;
-    std::vector<flatbuffers::Offset<Tables::Record>> offs;
-    sky_root root = getSkyRoot(fb, fb_size, SFT_FLATBUF_FLEX_ROW);
+    schema_vec schema;
+    vector<std::string> elems;
 
-    // identify the max col idx, to prevent flexbuf vector oob error
-    int col_idx_max = -1;
-    for (auto it=data_schema.begin(); it!=data_schema.end(); ++it) {
-        if (it->idx > col_idx_max)
-            col_idx_max = it->idx;
+    // schema col info may be delimited by either; or newline, currently
+    if (schema_string.find(';') != std::string::npos) {
+        boost::split(elems, schema_string, boost::is_any_of(";"),
+                     boost::token_compress_on);
+    }
+    else if (schema_string.find('\n') != std::string::npos) {
+        boost::split(elems, schema_string, boost::is_any_of("\n"),
+                     boost::token_compress_on);
+    }
+    else {
+        // assume only 1 column so no col separators
+        elems.push_back(schema_string);
     }
 
-    bool project_all = std::equal(data_schema.begin(), data_schema.end(),
-                                  query_schema.begin(), compareColInfo);
+    // assume schema string contains at least one col's info
+    if (elems.size() < 1)
+        assert (TablesErrCodes::EmptySchema==0);
 
-    // build the flexbuf with computed aggregates, aggs are computed for
-    // each row that passes, and added to flexbuf after loop below.
-    bool encode_aggs = false;
-    if (hasAggPreds(preds)) encode_aggs = true;
-    bool encode_rows = !encode_aggs;
+    for (auto it = elems.begin(); it != elems.end(); ++it) {
 
-    // determines if we process specific rows or all rows, since
-    // row_nums vector is optional parameter - default process all rows.
-    bool process_all_rows = true;
-    uint32_t nrows = root.nrows;
-    if (!row_nums.empty()) {
-        process_all_rows = false;  // process specified row numbers only
-        nrows = row_nums.size();
+        vector<std::string> col_data;  // each string describes one col info
+        std::string col_info_string = *it;
+        boost::trim(col_info_string);
+
+        // expected num of metadata items in our Tables::col_info struct
+        uint32_t col_metadata_items = NUM_COL_INFO_FIELDS;
+
+        // ignore empty strings after trimming, due to above boost split.
+        // expected len of at least n items with n-1 spaces
+        uint32_t col_info_string_min_len = (2 * col_metadata_items) - 1;
+        if (col_info_string.length() < col_info_string_min_len)
+            continue;
+
+        boost::split(col_data, col_info_string, boost::is_any_of(" "),
+                     boost::token_compress_on);
+
+        if (col_data.size() != col_metadata_items)
+            assert (TablesErrCodes::BadColInfoFormat==0);
+
+        std::string name = col_data[4];
+        boost::trim(name);
+        const struct col_info ci(col_data[0], col_data[1], col_data[2],
+                                 col_data[3], name);
+        schema.push_back(ci);
     }
+    return schema;
+}
 
-    // 1. check the preds for passing
-    // 2a. accumulate agg preds (return flexbuf built after all rows) or
-    // 2b. build the return flatbuf inline below from each row's projection
-    for (uint32_t i = 0; i < nrows; i++) {
+predicate_vec predsFromString(schema_vec &schema, std::string preds_string) {
+    // format: ;colname,opname,value;colname,opname,value;...
+    // e.g.,;orderkey,eq,5;comment,like,hello world;..
 
-        // process row i or the specified row number
-        uint32_t rnum = 0;
-        if (process_all_rows) rnum = i;
-        else rnum = row_nums[i];
-        if (rnum > root.nrows) {
-            errmsg += "ERROR: rnum(" + std::to_string(rnum) +
-                      ") > root.nrows(" + to_string(root.nrows) + ")";
-            return RowIndexOOB;
+    predicate_vec preds;
+    boost::trim(preds_string);  // whitespace
+    boost::trim_if(preds_string, boost::is_any_of(PRED_DELIM_OUTER));
+
+    if (preds_string.empty() || preds_string== SELECT_DEFAULT) return preds;
+
+    vector<std::string> pred_items;
+    boost::split(pred_items, preds_string, boost::is_any_of(PRED_DELIM_OUTER),
+                 boost::token_compress_on);
+    vector<std::string> colnames;
+    vector<std::string> select_descr;
+
+    Tables::predicate_vec agg_preds;
+    for (auto it=pred_items.begin(); it!=pred_items.end(); ++it) {
+        boost::split(select_descr, *it, boost::is_any_of(PRED_DELIM_INNER),
+                     boost::token_compress_on);
+
+        assert(select_descr.size()==3);  // currently a triple per pred.
+
+        std::string colname = select_descr.at(0);
+        std::string opname = select_descr.at(1);
+        std::string val = select_descr.at(2);
+        boost::to_upper(colname);
+
+        // this only has 1 col and only used to verify input
+        schema_vec sv = schemaFromColNames(schema, colname);
+        if (sv.empty()) {
+            cerr << "Error: colname=" << colname << " not present in schema."
+                 << std::endl;
+            assert (TablesErrCodes::RequestedColNotPresent == 0);
         }
+        col_info ci = sv.at(0);
+        int op_type = skyOpTypeFromString(opname);
 
-         // skip dead rows.
-        if (root.delete_vec[rnum] == 1) continue;
+        switch (ci.type) {
 
-        // get a skyhook record struct
-        sky_rec rec = getSkyRec(static_cast<row_offs>(root.data_vec)->Get(rnum));
-
-        // apply predicates to this record
-        if (!preds.empty()) {
-            bool pass = applyPredicates(preds, rec);
-            if (!pass) continue;  // skip non matching rows.
-        }
-
-        // note: agg preds are accumlated in the predicate itself during
-        // applyPredicates above, then later added to result fb outside
-        // of this loop (i.e., they are not encoded into the result fb yet)
-        // thus we can skip the below encoding of rows into the result fb
-        // and just continue accumulating agg preds in this processing loop.
-        if (!encode_rows) continue;
-
-        if (project_all) {
-            // TODO:  just pass through row table offset to new data_vec
-            // (which is also type offs), do not rebuild row table and flexbuf
-        }
-
-        // build the return projection for this row.
-        auto row = rec.data.AsVector();
-        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
-        flatbuffers::Offset<flatbuffers::Vector<unsigned char>> datavec;
-
-        flexbldr->Vector([&]() {
-
-            // iter over the query schema, locating it within the data schema
-            for (auto it=query_schema.begin();
-                      it!=query_schema.end() && !errcode; ++it) {
-                col_info col = *it;
-                if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
-                    errcode = TablesErrCodes::RequestedColIndexOOB;
-                    errmsg.append("ERROR processSkyFb(): table=" +
-                            root.table_name + "; rid=" +
-                            std::to_string(rec.RID) + " col.idx=" +
-                            std::to_string(col.idx) + " OOB.");
-
-                } else {
-
-                    switch(col.type) {  // encode data val into flexbuf
-
-                        case SDT_INT8:
-                            flexbldr->Add(row[col.idx].AsInt8());
-                            break;
-                        case SDT_INT16:
-                            flexbldr->Add(row[col.idx].AsInt16());
-                            break;
-                        case SDT_INT32:
-                            flexbldr->Add(row[col.idx].AsInt32());
-                            break;
-                        case SDT_INT64:
-                            flexbldr->Add(row[col.idx].AsInt64());
-                            break;
-                        case SDT_UINT8:
-                            flexbldr->Add(row[col.idx].AsUInt8());
-                            break;
-                        case SDT_UINT16:
-                            flexbldr->Add(row[col.idx].AsUInt16());
-                            break;
-                        case SDT_UINT32:
-                            flexbldr->Add(row[col.idx].AsUInt32());
-                            break;
-                        case SDT_UINT64:
-                            flexbldr->Add(row[col.idx].AsUInt64());
-                            break;
-                        case SDT_CHAR:
-                            flexbldr->Add(row[col.idx].AsInt8());
-                            break;
-                        case SDT_UCHAR:
-                            flexbldr->Add(row[col.idx].AsUInt8());
-                            break;
-                        case SDT_BOOL:
-                            flexbldr->Add(row[col.idx].AsBool());
-                            break;
-                        case SDT_FLOAT:
-                            flexbldr->Add(row[col.idx].AsFloat());
-                            break;
-                        case SDT_DOUBLE:
-                            flexbldr->Add(row[col.idx].AsDouble());
-                            break;
-                        case SDT_DATE:
-                            flexbldr->Add(row[col.idx].AsString().str());
-                            break;
-                        case SDT_STRING:
-                            flexbldr->Add(row[col.idx].AsString().str());
-                            break;
-                        default: {
-                            errcode = TablesErrCodes::UnsupportedSkyDataType;
-                            errmsg.append("ERROR processSkyFb(): table=" +
-                                    root.table_name + "; rid=" +
-                                    std::to_string(rec.RID) + " col.type=" +
-                                    std::to_string(col.type) +
-                                    " UnsupportedSkyDataType.");
-                        }
-                    }
-                }
+            case SDT_BOOL: {
+                TypedPredicate<bool>* p = \
+                        new TypedPredicate<bool> \
+                        (ci.idx, ci.type, op_type, std::stol(val));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
             }
-        });
-
-        // finalize the row's projected data within our flexbuf
-        flexbldr->Finish();
-
-        // build the return ROW flatbuf that contains the flexbuf data
-        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
-        delete flexbldr;
-
-        // TODO: update nullbits
-        auto nullbits = flatbldr.CreateVector(rec.nullbits);
-        flatbuffers::Offset<Tables::Record> row_off = \
-                Tables::CreateRecord(flatbldr, rec.RID, nullbits, row_data);
-
-        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
-        dead_rows.push_back(0);
-        offs.push_back(row_off);
+            case SDT_INT8: {
+                TypedPredicate<int8_t>* p = \
+                        new TypedPredicate<int8_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<int8_t>(std::stol(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_INT16: {
+                TypedPredicate<int16_t>* p = \
+                        new TypedPredicate<int16_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<int16_t>(std::stol(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_INT32: {
+                TypedPredicate<int32_t>* p = \
+                        new TypedPredicate<int32_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<int32_t>(std::stol(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_INT64: {
+                TypedPredicate<int64_t>* p = \
+                        new TypedPredicate<int64_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<int64_t>(std::stoll(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_UINT8: {
+                TypedPredicate<uint8_t>* p = \
+                        new TypedPredicate<uint8_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<uint8_t>(std::stoul(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_UINT16: {
+                TypedPredicate<uint16_t>* p = \
+                        new TypedPredicate<uint16_t> \
+                        (ci.idx, ci.type, op_type,
+                        static_cast<uint16_t>(std::stoul(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_UINT32: {
+                TypedPredicate<uint32_t>* p = \
+                        new TypedPredicate<uint32_t> \
+                        (ci.idx, ci.type, op_type,
+                        static_cast<uint32_t>(std::stoul(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_UINT64: {
+                TypedPredicate<uint64_t>* p = \
+                        new TypedPredicate<uint64_t> \
+                        (ci.idx, ci.type, op_type, \
+                        static_cast<uint64_t>(std::stoull(val)));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_FLOAT: {
+                TypedPredicate<float>* p = \
+                        new TypedPredicate<float> \
+                        (ci.idx, ci.type, op_type, std::stof(val));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_DOUBLE: {
+                TypedPredicate<double>* p = \
+                        new TypedPredicate<double> \
+                        (ci.idx, ci.type, op_type, std::stod(val));
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_CHAR: {
+                assert (val.length() > 0);
+                TypedPredicate<char>* p = \
+                        new TypedPredicate<char> \
+                        (ci.idx, ci.type, op_type, val[0]);
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_UCHAR: {
+                assert (val.length() > 0);
+                TypedPredicate<unsigned char>* p = \
+                        new TypedPredicate<unsigned char> \
+                        (ci.idx, ci.type, op_type, val[0]);
+                if (p->isGlobalAgg()) agg_preds.push_back(p);
+                else preds.push_back(p);
+                break;
+            }
+            case SDT_STRING: {
+                TypedPredicate<std::string>* p = \
+                        new TypedPredicate<std::string> \
+                        (ci.idx, ci.type, op_type, val);
+                preds.push_back(p);
+                break;
+            }
+            case SDT_DATE: {
+                TypedPredicate<std::string>* p = \
+                        new TypedPredicate<std::string> \
+                        (ci.idx, ci.type, op_type, val);
+                preds.push_back(p);
+                break;
+            }
+            default: assert (TablesErrCodes::UnknownSkyDataType==0);
+        }
     }
 
-    // here we build the return flatbuf result with agg values that were
-    // accumulated above in applyPredicates (agg predicates do not return
-    // true false but update their internal values each time processed
-    if (encode_aggs) { //  encode accumulated agg pred val into return flexbuf
-        PredicateBase* pb;
-        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
-        flexbldr->Vector([&]() {
-            for (auto itp = preds.begin(); itp != preds.end(); ++itp) {
+    // add agg preds to end so they are only updated if all other preds pass.
+    // currently in apply_predicates they are applied in order.
+    if (!agg_preds.empty()) {
+        preds.reserve(preds.size() + agg_preds.size());
+        std::move(agg_preds.begin(), agg_preds.end(),
+                  std::inserter(preds, preds.end()));
+        agg_preds.clear();
+        agg_preds.shrink_to_fit();
+    }
+    return preds;
+}
 
-                // assumes preds appear in same order as return schema
-                if (!(*itp)->isGlobalAgg()) continue;
-                pb = *itp;
-                switch(pb->colType()) {  // encode agg data val into flexbuf
+std::vector<std::string> colnamesFromPreds(predicate_vec &preds,
+                                           schema_vec &schema) {
+    std::vector<std::string> colnames;
+    for (auto it_prd=preds.begin(); it_prd!=preds.end(); ++it_prd) {
+        for (auto it_scm=schema.begin(); it_scm!=schema.end(); ++it_scm) {
+            if ((*it_prd)->colIdx() == it_scm->idx) {
+                colnames.push_back(it_scm->name);
+            }
+        }
+    }
+    return colnames;
+}
+
+std::vector<std::string> colnamesFromSchema(schema_vec &schema) {
+    std::vector<std::string> colnames;
+    for (auto it = schema.begin(); it != schema.end(); ++it) {
+        colnames.push_back(it->name);
+    }
+    return colnames;
+}
+
+std::string predsToString(predicate_vec &preds, schema_vec &schema) {
+    // output format:  "|orderkey,lt,5|comment,like,he|extendedprice,gt,2.01|"
+    // where '|' and ',' are denoted as PRED_DELIM_OUTER and PRED_DELIM_INNER
+
+    std::string preds_str;
+
+    // for each pred specified, we iterate over the schema to find its
+    // correpsonding column index so we can build the col value string
+    // based on col type.
+    for (auto it_prd = preds.begin(); it_prd != preds.end(); ++it_prd) {
+        for (auto it_sch = schema.begin(); it_sch != schema.end(); ++it_sch) {
+            col_info ci = *it_sch;
+
+            // if col indexes match then build the value string.
+            if (((*it_prd)->colIdx() == ci.idx) or
+                ((*it_prd)->colIdx() == RID_COL_INDEX)) {
+                preds_str.append(PRED_DELIM_OUTER);
+                std::string colname;
+
+                // set the column name string
+                if ((*it_prd)->colIdx() == RID_COL_INDEX)
+                    colname = RID_INDEX;  // special col index for RID 'col'
+                else
+                    colname = ci.name;
+                preds_str.append(colname);
+                preds_str.append(PRED_DELIM_INNER);
+                preds_str.append(skyOpTypeToString((*it_prd)->opType()));
+                preds_str.append(PRED_DELIM_INNER);
+
+                // set the col's value as string based on data type
+                std::string val;
+                switch ((*it_prd)->colType()) {
+
+                    case SDT_BOOL: {
+                        TypedPredicate<bool>* p = \
+                            dynamic_cast<TypedPredicate<bool>*>(*it_prd);
+                        val = std::string(1, p->Val());
+                        break;
+                    }
+                    case SDT_INT8: {
+                        TypedPredicate<int8_t>* p = \
+                            dynamic_cast<TypedPredicate<int8_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
+                    case SDT_INT16: {
+                        TypedPredicate<int16_t>* p = \
+                            dynamic_cast<TypedPredicate<int16_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
+                    case SDT_INT32: {
+                        TypedPredicate<int32_t>* p = \
+                            dynamic_cast<TypedPredicate<int32_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
                     case SDT_INT64: {
                         TypedPredicate<int64_t>* p = \
-                                dynamic_cast<TypedPredicate<int64_t>*>(pb);
-                        int64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
+                            dynamic_cast<TypedPredicate<int64_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
+                    case SDT_UINT8: {
+                        TypedPredicate<uint8_t>* p = \
+                            dynamic_cast<TypedPredicate<uint8_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
+                    case SDT_UINT16: {
+                        TypedPredicate<uint16_t>* p = \
+                            dynamic_cast<TypedPredicate<uint16_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
                         break;
                     }
                     case SDT_UINT32: {
                         TypedPredicate<uint32_t>* p = \
-                                dynamic_cast<TypedPredicate<uint32_t>*>(pb);
-                        uint32_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
+                            dynamic_cast<TypedPredicate<uint32_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
                         break;
                     }
                     case SDT_UINT64: {
                         TypedPredicate<uint64_t>* p = \
-                                dynamic_cast<TypedPredicate<uint64_t>*>(pb);
-                        uint64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
+                            dynamic_cast<TypedPredicate<uint64_t>*>(*it_prd);
+                        val = std::to_string(p->Val());
+                        break;
+                    }
+                    case SDT_CHAR: {
+                        TypedPredicate<char>* p = \
+                            dynamic_cast<TypedPredicate<char>*>(*it_prd);
+                        val = std::string(1, p->Val());
+                        break;
+                    }
+                    case SDT_UCHAR: {
+                        TypedPredicate<unsigned char>* p = \
+                            dynamic_cast<TypedPredicate<unsigned char>*>(*it_prd);
+                        val = std::string(1, p->Val());
                         break;
                     }
                     case SDT_FLOAT: {
                         TypedPredicate<float>* p = \
-                                dynamic_cast<TypedPredicate<float>*>(pb);
-                        float agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
+                            dynamic_cast<TypedPredicate<float>*>(*it_prd);
+                        val = std::to_string(p->Val());
                         break;
                     }
                     case SDT_DOUBLE: {
                         TypedPredicate<double>* p = \
-                                dynamic_cast<TypedPredicate<double>*>(pb);
-                        double agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
+                            dynamic_cast<TypedPredicate<double>*>(*it_prd);
+                        val = std::to_string(p->Val());
                         break;
                     }
-                    default:  assert(UnsupportedAggDataType==0);
+                    case SDT_STRING:
+                    case SDT_DATE: {
+                        TypedPredicate<std::string>* p = \
+                            dynamic_cast<TypedPredicate<std::string>*>(*it_prd);
+                        val = p->Val();
+                        break;
+                    }
+                    default: assert (!val.empty());
                 }
+                preds_str.append(val);
             }
-        });
-        // finalize the row's projected data within our flexbuf
-        flexbldr->Finish();
-
-        // build the return ROW flatbuf that contains the flexbuf data
-        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
-        delete flexbldr;
-
-        // assume no nullbits in the agg results. ?
-        nullbits_vector nb(2,0);
-        auto nullbits = flatbldr.CreateVector(nb);
-        int RID = -1;  // agg recs only, since these are derived data
-        flatbuffers::Offset<Tables::Record> row_off = \
-            Tables::CreateRecord(flatbldr, RID, nullbits, row_data);
-
-        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
-        dead_rows.push_back(0);
-        offs.push_back(row_off);
+            if ((*it_prd)->colIdx() == RID_COL_INDEX)
+                break;  // only 1 RID col in the schema
+        }
     }
-
-    // now build the return ROOT flatbuf wrapper
-    std::string query_schema_str;
-    for (auto it = query_schema.begin(); it != query_schema.end(); ++it) {
-        query_schema_str.append(it->toString() + "\n");
-    }
-
-    auto return_data_schema = flatbldr.CreateString(query_schema_str);
-    auto db_schema_name = flatbldr.CreateString(root.db_schema_name);
-    auto table_name = flatbldr.CreateString(root.table_name);
-    auto delete_v = flatbldr.CreateVector(dead_rows);
-    auto rows_v = flatbldr.CreateVector(offs);
-
-    auto table = CreateTable(
-        flatbldr,
-        root.data_format_type,
-        root.skyhook_version,
-        root.data_structure_version,
-        root.data_schema_version,
-        return_data_schema,
-        db_schema_name,
-        table_name,
-        delete_v,
-        rows_v,
-        offs.size());
-
-    // NOTE: the fb may be incomplete/empty, but must finish() else internal
-    // fb lib assert finished() fails, hence we must always return a valid fb
-    // and catch any ret error code upstream
-    flatbldr.Finish(table);
-
-    return errcode;
+    preds_str.append(PRED_DELIM_OUTER);
+    return preds_str;
 }
 
-int processSkyFb_fbu_rows(
-    flatbuffers::FlatBufferBuilder& flatbldr,
-    schema_vec& data_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* fb,
-    const size_t fb_size,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    delete_vector dead_rows;
-    std::vector<flatbuffers::Offset<Tables::Record>> offs;
-    sky_root root = getSkyRoot(fb, fb_size, SFT_FLATBUF_UNION_ROW);
+int skyOpTypeFromString(std::string op) {
+    int op_type = 0;
+    if (op=="lt") op_type = SOT_lt;
+    else if (op=="gt") op_type = SOT_gt;
+    else if (op=="eq") op_type = SOT_eq;
+    else if (op=="ne") op_type = SOT_ne;
+    else if (op=="leq") op_type = SOT_leq;
+    else if (op=="geq") op_type = SOT_geq;
+    else if (op=="add") op_type = SOT_add;
+    else if (op=="sub") op_type = SOT_sub;
+    else if (op=="mul") op_type = SOT_mul;
+    else if (op=="div") op_type = SOT_div;
+    else if (op=="min") op_type = SOT_min;
+    else if (op=="max") op_type = SOT_max;
+    else if (op=="sum") op_type = SOT_sum;
+    else if (op=="cnt") op_type = SOT_cnt;
+    else if (op=="like") op_type = SOT_like;
+    else if (op=="in") op_type = SOT_in;
+    else if (op=="not_in") op_type = SOT_not_in;
+    else if (op=="before") op_type = SOT_before;
+    else if (op=="between") op_type = SOT_between;
+    else if (op=="after") op_type = SOT_after;
+    else if (op=="logical_or") op_type = SOT_logical_or;
+    else if (op=="logical_and") op_type = SOT_logical_and;
+    else if (op=="logical_not") op_type = SOT_logical_not;
+    else if (op=="logical_nor") op_type = SOT_logical_nor;
+    else if (op=="logical_xor") op_type = SOT_logical_xor;
+    else if (op=="logical_nand") op_type = SOT_logical_nand;
+    else if (op=="bitwise_and") op_type = SOT_bitwise_and;
+    else if (op=="bitwise_or") op_type = SOT_bitwise_or;
+    else assert (TablesErrCodes::OpNotRecognized==0);
+    return op_type;
+}
 
-    // identify the max col idx, to prevent flexbuf vector oob error
-    int col_idx_max = -1;
-    for (auto it=data_schema.begin(); it!=data_schema.end(); ++it) {
-        if (it->idx > col_idx_max)
-            col_idx_max = it->idx;
+std::string skyOpTypeToString(int op) {
+    std::string op_str;
+    if (op==SOT_lt) op_str = "lt";
+    else if (op==SOT_gt) op_str = "gt";
+    else if (op==SOT_eq) op_str = "eq";
+    else if (op==SOT_ne) op_str = "ne";
+    else if (op==SOT_leq) op_str = "leq";
+    else if (op==SOT_geq) op_str = "geq";
+    else if (op==SOT_add) op_str = "add";
+    else if (op==SOT_sub) op_str = "sub";
+    else if (op==SOT_mul) op_str = "mul";
+    else if (op==SOT_div) op_str = "div";
+    else if (op==SOT_min) op_str = "min";
+    else if (op==SOT_max) op_str = "max";
+    else if (op==SOT_sum) op_str = "sum";
+    else if (op==SOT_cnt) op_str = "cnt";
+    else if (op==SOT_like) op_str = "like";
+    else if (op==SOT_in) op_str = "in";
+    else if (op==SOT_not_in) op_str = "not_in";
+    else if (op==SOT_before) op_str = "before";
+    else if (op==SOT_between) op_str = "between";
+    else if (op==SOT_after) op_str = "after";
+    else if (op==SOT_logical_or) op_str = "logical_or";
+    else if (op==SOT_logical_and) op_str = "logical_and";
+    else if (op==SOT_logical_not) op_str = "logical_not";
+    else if (op==SOT_logical_nor) op_str = "logical_nor";
+    else if (op==SOT_logical_xor) op_str = "logical_xor";
+    else if (op==SOT_logical_nand) op_str = "logical_nand";
+    else if (op==SOT_bitwise_and) op_str = "bitwise_and";
+    else if (op==SOT_bitwise_or) op_str = "bitwise_or";
+    else assert (!op_str.empty());
+    return op_str;
+}
+
+void printSkyRootHeader(sky_root &r) {
+
+    std::cout << "\n\nSKYHOOK_ROOT HEADER"<< std::endl;
+    std::cout << "skyhook_version: "<< r.skyhook_version << std::endl;
+    std::cout << "data_format_type: "<< r.data_format_type << std::endl;
+    std::cout << "data_structure_version: "<< r.data_structure_version << std::endl;
+    std::cout << "data_schema_version: "<< r.data_schema_version << std::endl;
+    std::cout << "db_schema_name: "<< r.db_schema_name << std::endl;
+    std::cout << "table name: "<< r.table_name << std::endl;
+    std::cout << "data_schema: \n"<< r.data_schema << std::endl;
+    std::cout << "delete vector: [";
+        for (int i=0; i< (int)r.delete_vec.size(); i++) {
+            std::cout << (int)r.delete_vec[i];
+            if (i != (int)r.delete_vec.size()-1)
+                std::cout <<", ";
+        }
+    std::cout << "]" << std::endl;
+    std::cout << "nrows: " << r.nrows << std::endl;
+    std::cout << std::endl;
+}
+
+void printSkyRecHeader(sky_rec &r) {
+
+    std::cout << "\nSKYHOOK_REC HEADER" << std::endl;
+    std::cout << "RID: "<< r.RID << std::endl;
+    std::string bitstring = "";
+    int64_t val = 0;
+    uint64_t bit = 0;
+    for(int j = 0; j < (int)r.nullbits.size(); j++) {
+        val = r.nullbits.at(j);
+        for (uint64_t k=0; k < 8 * sizeof(r.nullbits.at(j)); k++) {
+            uint64_t mask =  1 << k;
+            ((val&mask)>0) ? bit=1 : bit=0;
+            bitstring.append(std::to_string(bit));
+        }
+        std::cout << "nullbits ["<< j << "]: val=" << val << ": bits="
+                  << bitstring;
+        std::cout << std::endl;
+        bitstring.clear();
+    }
+}
+
+long long int printFlatbufFlexRowAsCsv(
+        const char* dataptr,
+        const size_t datasz,
+        bool print_header,
+        bool print_verbose,
+        long long int max_to_print) {
+
+    // get root table ptr as sky struct
+    sky_root root = getSkyRoot(dataptr, datasz, SFT_FLATBUF_FLEX_ROW);
+    schema_vec sc = schemaFromString(root.data_schema);
+    assert(!sc.empty());
+
+    if (print_verbose)
+        printSkyRootHeader(root);
+
+    // print header row showing schema
+    if (print_header) {
+        bool first = true;
+        for (schema_vec::iterator it = sc.begin(); it != sc.end(); ++it) {
+            if (!first) std::cout << CSV_DELIM;
+            first = false;
+            std::cout << it->name;
+            if (it->is_key) std::cout << "(key)";
+            if (!it->nullable) std::cout << "(NOT NULL)";
+
+        }
+        std::cout << std::endl; // newline to start first row.
     }
 
-    bool project_all = std::equal(data_schema.begin(), data_schema.end(),
-                                  query_schema.begin(), compareColInfo);
+    long long int counter = 0;
+    for (uint32_t i = 0; i < root.nrows; i++, counter++) {
+        if (counter >= max_to_print)
+            break;
 
-    // build the flexbuf with computed aggregates, aggs are computed for
-    // each row that passes, and added to flexbuf after loop below.
-    bool encode_aggs = false;
-    if (hasAggPreds(preds)) encode_aggs = true;
-    bool encode_rows = !encode_aggs;
+        if (root.delete_vec.at(i) == 1) continue;  // skip dead rows.
 
-    // determines if we process specific rows or all rows, since
-    // row_nums vector is optional parameter - default process all rows.
-    bool process_all_rows = true;
-    uint32_t nrows = root.nrows;
-    if (!row_nums.empty()) {
-        process_all_rows = false;  // process specified row numbers only
-        nrows = row_nums.size();
-    }
+        // get the record struct
+        sky_rec skyrec = \
+            getSkyRec(static_cast<row_offs>(root.data_vec)->Get(i));
 
-    // 1. check the preds for passing
-    // 2a. accumulate agg preds (return flexbuf built after all rows) or
-    // 2b. build the return flatbuf inline below from each row's projection
-    for (uint32_t i = 0; i < nrows; i++) {
+        // now get the flexbuf row's data as a flexbuf vec
+        auto row = skyrec.data.AsVector();
 
-        // process row i or the specified row number
-        uint32_t rnum = 0;
-        if (process_all_rows) rnum = i;
-        else rnum = row_nums[i];
-        if (rnum > root.nrows) {
-            errmsg += "ERROR: rnum(" + std::to_string(rnum) +
-                      ") > root.nrows(" + to_string(root.nrows) + ")";
-            return RowIndexOOB;
-        }
+        if (print_verbose)
+            printSkyRecHeader(skyrec);
 
-        // skip dead rows.
-        if (root.delete_vec[rnum] == 1) continue;
+        // for each col in the row, print a NULL or the col's value/
+        bool first = true;
+        for (uint32_t j = 0; j < sc.size(); j++) {
+            if (!first) std::cout << CSV_DELIM;
+            first = false;
+            col_info col = sc.at(j);
 
-        // get a skyhook record struct
-        sky_rec_fbu rec = getSkyRec_fbu(root, rnum);
-
-        // apply predicates to this record
-        if (!preds.empty()) {
-            bool pass = applyPredicates_fbu_row(preds, rec);
-            if (!pass) continue;  // skip non matching rows.
-        }
-
-        // note: agg preds are accumlated in the predicate itself during
-        // applyPredicates above, then later added to result fb outside
-        // of this loop (i.e., they are not encoded into the result fb yet)
-        // thus we can skip the below encoding of rows into the result fb
-        // and just continue accumulating agg preds in this processing loop.
-        if (!encode_rows) continue;
-
-        if (project_all) {
-            // TODO:  just pass through row table offset to new data_vec
-            // (which is also type offs), do not rebuild row table and flexbuf
-        }
-
-        // build the return projection for this row.
-        auto row = rec.data_fbu_rows;
-        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
-        flatbuffers::Offset<flatbuffers::Vector<unsigned char>> datavec;
-
-        flexbldr->Vector([&]() {
-            // iter over the query schema, locating it within the data schema
-            //bool first = true;
-            for (auto it=query_schema.begin();
-                      it!=query_schema.end() && !errcode; ++it) {
-                //if (!first) std::cout << CSV_DELIM;
-                //first = false;
-                col_info col = *it;
-                if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
-                    errcode = TablesErrCodes::RequestedColIndexOOB;
-                    errmsg.append("ERROR processSkyFb(): table=" +
-                            root.table_name + "; rid=" +
-                            std::to_string(rec.RID) + " col.idx=" +
-                            std::to_string(col.idx) + " OOB.");
-                } else {
-                    switch(col.type) {  // encode data val into flexbuf
-                        //case SDT_INT8:
-                        //    flexbldr->Add(row[col.idx].AsInt8());
-                        //    break;
-                        //case SDT_INT16:
-                        //    flexbldr->Add(row[col.idx].AsInt16());
-                        //    break;
-                        //case SDT_INT32:
-                        //    flexbldr->Add(row[col.idx].AsInt32());
-                        //    break;
-                        //case SDT_INT64:
-                        //    flexbldr->Add(row[col.idx].AsInt64());
-                        //    break;
-                        //case SDT_UINT8:
-                        //    flexbldr->Add(row[col.idx].AsUInt8());
-                        //    break;
-                        //case SDT_UINT16:
-                        //    flexbldr->Add(row[col.idx].AsUInt16());
-                        //    break;
-                        case SDT_UINT32: {
-                            auto int_col_data =
-                              static_cast< const Tables::SDT_UINT32_FBU* >(row->Get(col.idx));
-                            auto data = int_col_data->data()->Get(0);
-                            //std::cout << std::to_string(data);
-                            flexbldr->Add(data);
-                            break;
-                        }
-                        case SDT_UINT64: {
-                            auto int_col_data =
-                              static_cast< const Tables::SDT_UINT64_FBU* >(row->Get(col.idx));
-                            auto data = int_col_data->data()->Get(0);
-                            //std::cout << std::to_string(data);
-                            flexbldr->Add(data);
-                            break;
-                        }
-                        //case SDT_CHAR:
-                        //    flexbldr->Add(row[col.idx].AsInt8());
-                        //    break;
-                        //case SDT_UCHAR:
-                        //    flexbldr->Add(row[col.idx].AsUInt8());
-                        //    break;
-                        //case SDT_BOOL:
-                        //    flexbldr->Add(row[col.idx].AsBool());
-                        //    break;
-                        case SDT_FLOAT: {
-                            auto float_col_data =
-                              static_cast< const Tables::SDT_FLOAT_FBU* >(row->Get(col.idx));
-                            auto data = float_col_data->data()->Get(0);
-                            //std::cout << std::to_string(data);
-                            flexbldr->Add(data);
-                            break;
-                        }
-                        //case SDT_DOUBLE:
-                        //    flexbldr->Add(row[col.idx].AsDouble());
-                        //    break;
-                        //case SDT_DATE:
-                        //    flexbldr->Add(row[col.idx].AsString().str());
-                        //    break;
-                        case SDT_STRING: {
-                            auto string_col_data =
-                              static_cast< const Tables::SDT_STRING_FBU* >(row->Get(col.idx));
-                            auto data = string_col_data->data()->Get(0)->str();
-                            //std::cout << data;
-                            flexbldr->Add(data);
-                            break;
-                        }
-                        default: {
-                            errcode = TablesErrCodes::UnsupportedSkyDataType;
-                            errmsg.append("ERROR processSkyFb(): table=" +
-                                    root.table_name + "; rid=" +
-                                    std::to_string(rec.RID) + " col.type=" +
-                                    std::to_string(col.type) +
-                                    " UnsupportedSkyDataType.");
-                        } //default
-                    } //switch
-                } //ifelse
-            } //for
-        }); //flex builder Vector
-
-        // finalize the row's projected data within our flexbuf
-        flexbldr->Finish();
-
-        // build the return ROW flatbuf that contains the flexbuf data
-        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
-        delete flexbldr;
-
-        // TODO: update nullbits
-        auto nullbits = flatbldr.CreateVector(rec.nullbits);
-        flatbuffers::Offset<Tables::Record> row_off = \
-                Tables::CreateRecord(flatbldr, rec.RID, nullbits, row_data);
-
-        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
-        dead_rows.push_back(0);
-        offs.push_back(row_off);
-        //std::cout << std::endl;
-    } //for
-
-    // here we build the return flatbuf result with agg values that were
-    // accumulated above in applyPredicates (agg predicates do not return
-    // true false but update their internal values each time processed
-    if (encode_aggs) { //  encode accumulated agg pred val into return flexbuf
-        PredicateBase* pb;
-        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
-        flexbldr->Vector([&]() {
-            for (auto itp = preds.begin(); itp != preds.end(); ++itp) {
-                // assumes preds appear in same order as return schema
-                if (!(*itp)->isGlobalAgg()) continue;
-                pb = *itp;
-                switch(pb->colType()) {  // encode agg data val into flexbuf
-                    case SDT_INT64: {
-                        TypedPredicate<int64_t>* p = \
-                                dynamic_cast<TypedPredicate<int64_t>*>(pb);
-                        int64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        break;
-                    }
-                    case SDT_UINT32: {
-                        TypedPredicate<uint32_t>* p = \
-                                dynamic_cast<TypedPredicate<uint32_t>*>(pb);
-                        uint32_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        break;
-                    }
-                    case SDT_UINT64: {
-                        TypedPredicate<uint64_t>* p = \
-                                dynamic_cast<TypedPredicate<uint64_t>*>(pb);
-                        uint64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        break;
-                    }
-                    case SDT_FLOAT: {
-                        TypedPredicate<float>* p = \
-                                dynamic_cast<TypedPredicate<float>*>(pb);
-                        float agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        break;
-                    }
-                    case SDT_DOUBLE: {
-                        TypedPredicate<double>* p = \
-                                dynamic_cast<TypedPredicate<double>*>(pb);
-                        double agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        break;
-                    }
-                    default:  assert(UnsupportedAggDataType==0);
+            if (col.nullable) {  // check nullbit
+                bool is_null = false;
+                int pos = col.idx / (8*sizeof(skyrec.nullbits.at(0)));
+                int col_bitmask = 1 << col.idx;
+                if ((col_bitmask & skyrec.nullbits.at(pos)) != 0)  {
+                    is_null =true;
+                }
+                if (is_null) {
+                    std::cout << "NULL";
+                    continue;
                 }
             }
-        });
-        // finalize the row's projected data within our flexbuf
-        flexbldr->Finish();
+            switch (col.type) {
+                case SDT_BOOL: std::cout << row[j].AsBool(); break;
+                case SDT_INT8: std::cout << row[j].AsInt8(); break;
+                case SDT_INT16: std::cout << row[j].AsInt16(); break;
+                case SDT_INT32: std::cout << row[j].AsInt32(); break;
+                case SDT_INT64: std::cout << row[j].AsInt64(); break;
+                case SDT_UINT8: std::cout << row[j].AsUInt8(); break;
+                case SDT_UINT16: std::cout << row[j].AsUInt16(); break;
+                case SDT_UINT32: std::cout << row[j].AsUInt32(); break;
+                case SDT_UINT64: std::cout << row[j].AsUInt64(); break;
+                case SDT_FLOAT: std::cout << row[j].AsFloat(); break;
+                case SDT_DOUBLE: std::cout << row[j].AsDouble(); break;
+                case SDT_CHAR: std::cout <<
+                    std::string(1, row[j].AsInt8()); break;
+                case SDT_UCHAR: std::cout <<
+                    std::string(1, row[j].AsUInt8()); break;
+                case SDT_DATE: std::cout <<
+                    row[j].AsString().str(); break;
+                case SDT_STRING: std::cout <<
+                    row[j].AsString().str(); break;
+                default: assert (TablesErrCodes::UnknownSkyDataType);
+            }
+        }
+        std::cout << std::endl;  // newline to start next row.
+    }
+    return counter;
+}
 
-        // build the return ROW flatbuf that contains the flexbuf data
-        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
-        delete flexbldr;
+long long int printFlatbufFlexRowAsPGBinary(
+        const char* dataptr,
+        const size_t datasz,
+        bool print_header,
+        bool print_verbose,
+        long long int max_to_print) {
 
-        // assume no nullbits in the agg results. ?
-        nullbits_vector nb(2,0);
-        auto nullbits = flatbldr.CreateVector(nb);
-        int RID = -1;  // agg recs only, since these are derived data
-        flatbuffers::Offset<Tables::Record> row_off = \
-            Tables::CreateRecord(flatbldr, RID, nullbits, row_data);
+    // get root table ptr as sky struct
+    sky_root root = getSkyRoot(dataptr, datasz, SFT_FLATBUF_FLEX_ROW);
+    schema_vec sc = schemaFromString(root.data_schema);
+    assert(!sc.empty());
 
-        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
-        dead_rows.push_back(0);
-        offs.push_back(row_off);
-    } //if aggs
+    // postgres fstreams expect big endianness
+    bool big_endian = is_big_endian();
+    stringstream ss(std::stringstream::in |
+                    std::stringstream::out|
+                    std::stringstream::binary);
 
-    // now build the return ROOT flatbuf wrapper
-    std::string query_schema_str;
-    for (auto it = query_schema.begin(); it != query_schema.end(); ++it) {
-        query_schema_str.append(it->toString() + "\n");
+    // print binary stream header sequence first time only
+    if (print_header) {
+
+        // 11 byte signature sequence
+        const char* header_signature = "PGCOPY\n\377\r\n\0";
+        ss.write(header_signature, 11);
+
+        // 32 bit flags field, set bit#16=1 only if OIDs included in data
+        int flags_field = 0;
+        ss.write(reinterpret_cast<const char*>(&flags_field),
+                 sizeof(flags_field));
+
+        // 32 bit extra header len
+        int header_extension_len = 0;
+        ss.write(reinterpret_cast<const char*>(&header_extension_len),
+                 sizeof(header_extension_len));
     }
 
-    auto return_data_schema = flatbldr.CreateString(query_schema_str);
-    auto db_schema_name = flatbldr.CreateString(root.db_schema_name);
-    auto table_name = flatbldr.CreateString(root.table_name);
-    auto delete_v = flatbldr.CreateVector(dead_rows);
-    auto rows_v = flatbldr.CreateVector(offs);
-
-    auto table = CreateTable(
-        flatbldr,
-        root.data_format_type,
-        root.skyhook_version,
-        root.data_structure_version,
-        root.data_schema_version,
-        return_data_schema,
-        db_schema_name,
-        table_name,
-        delete_v,
-        rows_v,
-        offs.size());
-
-    // NOTE: the fb may be incomplete/empty, but must finish() else internal
-    // fb lib assert finished() fails, hence we must always return a valid fb
-    // and catch any ret error code upstream
-    flatbldr.Finish(table);
-
-    return errcode;
-} //processSkyFb_fbu_rows
-
-int processSkyFb_fbu_cols(
-    ceph::bufferlist wrapped_bls,
-    flatbuffers::FlatBufferBuilder& flatbldr,
-    schema_vec& data_schema,
-    schema_vec& query_schema,
-    predicate_vec& preds,
-    const char* fb,
-    const size_t fb_size,
-    std::string& errmsg,
-    const std::vector<uint32_t>& row_nums)
-{
-    int errcode = 0;
-    delete_vector dead_rows;
-    std::vector<flatbuffers::Offset<Tables::Record>> offs;
-
-    // get row ids to process. should be uniform for all structures.
-    sky_root starter_root = getSkyRoot(fb, fb_size, SFT_FLATBUF_UNION_COL);
-
-    // determines if we process specific rows or all rows, since
-    // row_nums vector is optional parameter - default process all rows.
-    uint32_t nrows = starter_root.nrows;
-    if (!row_nums.empty())
-        nrows = row_nums.size();
-
-    // identify the max col idx, to prevent flexbuf vector oob error
-    int col_idx_max = -1;
-    for (auto it=data_schema.begin(); it!=data_schema.end(); ++it) {
-        if (it->idx > col_idx_max)
-            col_idx_max = it->idx;
-    }
-
-    // get indices to process
-    std::vector<int> project_indices;
-    for (auto it=query_schema.begin(); it!=query_schema.end() && !errcode; ++it) {
-        col_info col = *it;
-        //std::cout << "query_schema : col.idx = " << col.idx << std::endl;
-        project_indices.push_back(col.idx);
-    }
-
+<<<<<<< HEAD
     // get the predicate indices
     std::vector<int> predicate_indices;
     for (auto it = preds.begin(); it != preds.end(); ++it) {
@@ -3151,10 +2395,13 @@ long long int printFlatbufFlexRowAsPGBinary(
                  sizeof(header_extension_len));
     }
 
+=======
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
     // 16 bit int, assumes same num cols for all rows below.
     int16_t ncols = static_cast<int16_t>(sc.size());
     if (!big_endian)
         ncols = __builtin_bswap16(ncols);
+<<<<<<< HEAD
 
     // row printing counter, used with --limit flag
     long long int counter = 0;
@@ -3500,8 +2747,12 @@ long long int printExampleFormatAsCsv(
     std::vector<std::string> data_rows;
     boost::split(data_rows, formatted_data, boost::is_any_of(" "),
                                                 boost::token_compress_on);
+=======
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 
+    // row printing counter, used with --limit flag
     long long int counter = 0;
+<<<<<<< HEAD
     for (uint32_t i = 0; i < data_rows.size(); i++, counter++) {
         if (counter >= max_to_print)
             break;
@@ -3801,7 +3052,561 @@ bool hasAggPreds(predicate_vec &preds) {
         if ((*it)->isGlobalAgg()) return true;
     return false;
 }
+=======
+    for (uint32_t i = 0; i < root.nrows; i++, counter++) {
+        if (counter >= max_to_print) break;
+        if (root.delete_vec.at(i) == 1) continue;
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 
+        // get the record struct
+        sky_rec skyrec = \
+            getSkyRec(static_cast<row_offs>(root.data_vec)->Get(i));
+
+        // 16 bit int num cols in this row (all rows same ncols currently)
+        ss.write(reinterpret_cast<const char*>(&ncols), sizeof(ncols));
+
+        // get the flexbuf row's data as a flexbuf vec
+        auto row = skyrec.data.AsVector();
+
+        // for each col in the row, print a NULL or the col's value/
+        for (unsigned j = 0; j < sc.size(); j++ ) {
+
+            col_info col = sc.at(j);
+
+            if (col.nullable) {  // check nullbit
+                bool is_null = false;
+                int pos = col.idx / (8*sizeof(skyrec.nullbits.at(0)));
+                int col_bitmask = 1 << col.idx;
+                if ((col_bitmask & skyrec.nullbits.at(pos)) != 0)  {
+                    is_null = true;
+                }
+                if (is_null) {
+                    // for null we only write the int representation of null,
+                    // followed by no data
+                    ss.write(reinterpret_cast<const char*>(&PGNULLBINARY),
+                             sizeof(PGNULLBINARY));
+                    continue;
+                }
+            }
+
+            // for each col, write 32 bit data len followed by data as char*
+            switch (col.type) {
+
+            case SDT_BOOL: {
+                uint8_t val = row[j].AsBool();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    // val is single byte, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_INT8: {
+                int8_t val = row[j].AsInt8();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    // val is single byte, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_INT16: {
+                int16_t val = row[j].AsInt16();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap16(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_INT32: {
+                int32_t val = row[j].AsInt32();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap32(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_INT64: {
+                int64_t val = row[j].AsInt64();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap64(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_UINT8: {
+                uint8_t val = row[j].AsUInt8();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    // val is single byte, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_UINT16: {
+                uint16_t val = row[j].AsUInt16();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap16(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_UINT32: {
+                uint32_t val = row[j].AsUInt32();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap32(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_UINT64: {
+                uint64_t val = row[j].AsUInt64();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    val = __builtin_bswap64(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_FLOAT:    // postgres float is alias for double
+            case SDT_DOUBLE: {
+
+                double val = 0.0;
+                if (col.type == SDT_FLOAT)
+                    val = row[j].AsFloat();  // flexbuf api requires type
+                else
+                    val = row[j].AsDouble();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    char val_bigend[len];
+                    char* vptr = (char*)&val;
+                    val_bigend[0]=vptr[7];
+                    val_bigend[1]=vptr[6];
+                    val_bigend[2]=vptr[5];
+                    val_bigend[3]=vptr[4];
+                    val_bigend[4]=vptr[3];
+                    val_bigend[5]=vptr[2];
+                    val_bigend[6]=vptr[1];
+                    val_bigend[7]=vptr[0];
+                    len = __builtin_bswap32(len);
+                    ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                    ss.write(val_bigend, sizeof(val));
+                }
+                else {
+                    ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                    ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                }
+                break;
+            }
+            case SDT_CHAR: {
+                int8_t val = row[j].AsInt8();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    // val is single byte, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_UCHAR: {
+                uint8_t val = row[j].AsUInt8();
+                int32_t len = sizeof(val);
+                if (!big_endian) {
+                    // val is single byte, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_DATE: {
+                // postgres uses 4 byte int date vals, offset by pg epoch
+                std::string strdate = row[j].AsString().str();
+                int32_t len = 4;  // fixed, postgres date specification
+                boost::gregorian::date d = \
+                    boost::gregorian::from_string(strdate);
+                int32_t val = d.julian_day() - Tables::POSTGRES_EPOCH_JDATE;
+                if (!big_endian) {
+                    val = __builtin_bswap32(val);
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(reinterpret_cast<const char*>(&val), sizeof(val));
+                break;
+            }
+            case SDT_STRING: {
+                std::string val = row[j].AsString().str();
+                int32_t len = val.length();
+                if (!big_endian) {
+                    // val is byte array, has no endianness
+                    len = __builtin_bswap32(len);
+                }
+                ss.write(reinterpret_cast<const char*>(&len), sizeof(len));
+                ss.write(val.c_str(), static_cast<int>(val.length()));
+                break;
+            }
+            default: assert (TablesErrCodes::UnknownSkyDataType);
+            }
+        }
+    }
+
+    // rewind and output all row data for this fb
+    ss.seekg (0, ios::beg);
+    std::cout << ss.rdbuf();
+    ss.flush();
+    return counter;
+}
+
+long long int printJSONAsCsv(
+        const char* dataptr,
+        const size_t datasz,
+        bool print_header,
+        bool print_verbose,
+        long long int max_to_print) {
+
+    // get root table ptr as sky struct
+    sky_root root = getSkyRoot(dataptr, datasz, SFT_JSON);
+    schema_vec sc = schemaFromString(root.data_schema);
+    assert(!sc.empty());
+
+    if (print_verbose)
+        printSkyRootHeader(root);
+
+    // print header row showing schema
+    if (print_header) {
+        bool first = true;
+        for (schema_vec::iterator it = sc.begin(); it != sc.end(); ++it) {
+            if (!first) std::cout << CSV_DELIM;
+            first = false;
+            std::cout << it->name;
+            if (it->is_key) std::cout << "(key)";
+            if (!it->nullable) std::cout << "(NOT NULL)";
+
+        }
+        std::cout << std::endl; // newline to start first row.
+    }
+
+    // iterate over each row data (Record_FBX)
+    // NOTE: JSON stores all rows (json objs) in single record currently.
+    long long int counter = 0;
+    for (uint32_t i = 0; i < root.nrows; i++, counter++) {
+        if (counter >= max_to_print)
+            break;
+
+        if (root.delete_vec.at(i) == 1) continue;  // skip dead rows.
+
+        // get the root pointer from skyhookv2_csv.fbs, used for json and
+        // csv text data
+        const Table_FBX* rootfbx = GetTable_FBX(dataptr);
+
+        // ptr to records offsets
+        const flatbuffers::Vector<flatbuffers::Offset<Record_FBX>>* \
+            offs = rootfbx->rows_vec();
+
+        // get the next record
+        const Record_FBX* rec = offs->Get(i);
+
+        // NOTE:
+        // rec->RID() and rec->nullbits() are set but not yet used for JSON
+
+        // NOTE: this a vector of strings, but for now JSON data will be stored
+        // as single string in elem[0], so data vector size here is only 1.
+        const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>* \
+            data = rec->data();
+
+        // iterate over json data, extracting from flatbuffers vec as a string.
+        std::string json_str("");
+        for (unsigned j = 0; j < data->size(); j++) {
+
+            // TODO: Assuming a flatflex object...
+            // for each row, extract as json string and print cols
+            // from each row according to schema_vec sc.
+            json_str = data->Get(j)->str();
+            std::cout << "row[" << i << "]=" << json_str << std::endl;
+
+            rapidjson::Document doc;
+            doc.Parse(json_str.c_str());
+
+            // TODO: right now this crashes due to a malformed JSON test obj.
+            //assert(doc.IsObject());
+
+            // static example of using rapidjson lib in ceph
+            rapidjson::Document d;
+            d.Parse(JSON_SAMPLE.c_str());
+            assert(d.IsObject());
+
+            assert(d.HasMember("V"));
+            assert(d["V"].IsString());
+            std::cout << d["V"].GetString() << std::endl;
+
+            assert(d.HasMember("S"));
+            assert(d["S"].IsString());
+            std::cout << d["S"].GetString() << std::endl;
+        }
+    }
+    return counter;
+}
+
+
+long long int printExampleFormatAsCsv(
+        const char* dataptr,
+        const size_t datasz,
+        bool print_header,
+        bool print_verbose,
+        long long int max_to_print) {
+
+    // convert dataptr to desired format, here just a char string.
+    std::string formatted_data(dataptr);
+
+    // print extra info from result data.
+    if (print_verbose)
+        std::cout << "EXAMPLE VERBOSE METADATA";
+
+    // print header row showing data schema
+    if (print_header) {
+        std::cout << "EXAMPLE SCHEMA HEADER";
+        std::cout << std::endl; // newline to start first data row.
+    }
+
+    std::vector<std::string> data_rows;
+    boost::split(data_rows, formatted_data, boost::is_any_of(" "),
+                                                boost::token_compress_on);
+
+    long long int counter = 0;
+    for (uint32_t i = 0; i < data_rows.size(); i++, counter++) {
+        if (counter >= max_to_print)
+            break;
+        std::cout << data_rows[i] <<std::endl;  // newline to start next row.
+    }
+    return counter;
+}
+
+
+// creates an fb meta data structure to wrap the underlying data
+// format (SkyFormatType)
+void
+createFbMeta(
+    flatbuffers::FlatBufferBuilder* meta_builder,
+    int data_format,
+    unsigned char *data,               // formatted, serialized data as char*
+    size_t data_size,                  // formatted data size in bytes
+    bool data_deleted,                 // def=false
+    size_t data_orig_off,              // def=0
+    size_t data_orig_len,              // def=0
+    CompressionType data_compression)  // def=none
+{
+    flatbuffers::Offset<flatbuffers::Vector<unsigned char>> data_blob = \
+            meta_builder->CreateVector(data, data_size);
+
+    flatbuffers::Offset<FB_Meta> meta_offset = Tables::CreateFB_Meta( \
+            *meta_builder,
+            data_format,
+            data_blob,
+            data_size,
+            data_deleted,
+            data_orig_off,
+            data_orig_len,
+            data_compression);
+    meta_builder->Finish(meta_offset);
+    assert (meta_builder->GetSize()>0);   // temp check for debug only
+}
+
+
+// Highest level abstraction over our data on disk.
+// Wraps a supported format (flatbuf, arrow, csv, parquet,...)
+// along with its metadata.  This unified structure is used as the primary
+// store/send/retreive data structure for many supported formats
+// format type is ignored if is_meta=true
+sky_meta getSkyMeta(bufferlist *bl, bool is_meta, int data_format) {
+
+    if (is_meta) {
+        const FB_Meta* meta = GetFB_Meta(bl->c_str());
+
+        return sky_meta(
+            meta->blob_orig_off(),     // data position in original file
+            meta->blob_orig_len(),     // data len in original file
+            meta->blob_compression(),  // blob compression
+            meta->blob_format(),       // blob's format (i.e.,SkyFormatType)
+            meta->blob_deleted(),      // blob valid (not deleted)
+            meta->blob_data()->size(), // blob actual size
+
+            // serialized blob data
+            reinterpret_cast<const char*>(meta->blob_data()->Data()));
+    }
+    else {
+        return sky_meta(    // for testing new raw formats without meta wrapper
+            0,              // off
+            0,              // len
+            none,           // no compression
+            data_format,    // user specified arg for testing formats
+            false,          // deleted?
+            bl->length(),    // formatted data size in bytes
+            bl->c_str());    // get data as contiguous bytes before accessing
+    }
+}
+
+// get the info from the flatbuf ROOT (top-level) table.
+// it is extraced differently for some formats in the cases below.
+sky_root getSkyRoot(const char *ds, size_t ds_size, int ds_format) {
+
+    int skyhook_version;
+    int data_format_type;
+    int data_structure_version;
+    int data_schema_version;
+    std::string data_schema;
+    std::string db_schema_name;
+    std::string table_name;
+    delete_vector delete_vec;
+    const void* data_vec;
+    uint32_t nrows;
+
+    switch (ds_format) {
+
+        case SFT_FLATBUF_FLEX_ROW: {
+            const Table* root = GetTable(ds);
+            skyhook_version = root->skyhook_version();
+            data_format_type = root->data_format_type();
+            data_structure_version = root->data_structure_version();
+            data_schema_version = root->data_schema_version();
+            data_schema = root->data_schema()->str();
+            db_schema_name = root->db_schema()->str();
+            table_name = root->table_name()->str();
+            delete_vec = delete_vector(root->delete_vector()->begin(),
+                                       root->delete_vector()->end());
+            data_vec = root->rows();
+            nrows = root->nrows();
+            break;
+        }
+
+        case SFT_JSON: {
+            const Table_FBX* root = GetTable_FBX(ds);
+            skyhook_version = root->skyhook_version();
+            data_format_type = root->data_format_type();
+            data_structure_version = root->data_structure_version();
+            data_schema_version = root->data_schema_version();
+            data_schema = root->data_schema()->str();
+            db_schema_name = root->db_schema_name()->str();
+            table_name = root->table_name()->str();
+            delete_vec = delete_vector(root->delete_vector()->begin(),
+                                       root->delete_vector()->end());
+            data_vec = root->rows_vec();
+            nrows = root->nrows();
+            break;
+        }
+
+        case SFT_ARROW: {
+            std::shared_ptr<arrow::Table> table;
+            std::shared_ptr<arrow::Buffer> buffer = \
+                arrow::MutableBuffer::Wrap(reinterpret_cast<uint8_t*>(const_cast<char*>(ds)), ds_size);
+            extract_arrow_from_buffer(&table, buffer);
+            auto schema = table->schema();
+            auto metadata = schema->metadata();
+            skyhook_version = std::stoi(metadata->value(METADATA_SKYHOOK_VERSION));
+            data_format_type = std::stoi(metadata->value(METADATA_DATA_FORMAT_TYPE));
+            data_structure_version = std::stoi(metadata->value(METADATA_DATA_STRUCTURE_VERSION));
+            data_schema_version = std::stoi(metadata->value(METADATA_DATA_SCHEMA_VERSION));
+            data_schema = metadata->value(METADATA_DATA_SCHEMA);
+            db_schema_name = metadata->value(METADATA_DB_SCHEMA);
+            table_name = metadata->value(METADATA_TABLE_NAME);
+            data_vec = NULL;
+            nrows = std::stoi(metadata->value(METADATA_NUM_ROWS));
+            break;
+        }
+
+        case SFT_FLATBUF_CSV_ROW:
+        case SFT_PG_TUPLE:
+        case SFT_CSV:
+        default:
+            assert (SkyFormatTypeNotRecognized==0);
+    }
+
+    // this is our skyhook_root struct now, which is agnostic to the
+    // underlying format and can be operated upon generically.
+    return sky_root(
+        skyhook_version,
+        data_format_type,
+        data_structure_version,
+        data_schema_version,
+        data_schema,
+        db_schema_name,
+        table_name,
+        delete_vec,
+        data_vec,
+        nrows
+    );
+}
+
+// extracts a single record for formats flatbuf and json only, can also be
+// extended for csv format
+sky_rec getSkyRec(const Tables::Record* rec, int format) {
+
+    switch (format) {
+        case SFT_FLATBUF_FLEX_ROW:
+            return sky_rec(
+                rec->RID(),
+                nullbits_vector(rec->nullbits()->begin(),
+                                rec->nullbits()->end()),
+                rec->data_flexbuffer_root()
+            );
+            break;
+
+        case SFT_JSON:
+
+            break;
+
+        default:
+            assert (TablesErrCodes::SkyFormatTypeNotRecognized==0);
+
+    }
+
+    // NOTE: default in declaration is SFT_FLATBUF_FLEX_ROW)
+    return sky_rec(
+        rec->RID(),
+        nullbits_vector(rec->nullbits()->begin(),
+                        rec->nullbits()->end()),
+        rec->data_flexbuffer_root()
+    );
+}
+
+/* TODO:
+* update sky_rec struct for rec fbx
+* sky_rec getSkyRec(const Tables::Record_FBX *rec, int format) {
+*
+*}
+*/
+
+bool hasAggPreds(predicate_vec &preds) {
+    for (auto it=preds.begin(); it!=preds.end();++it)
+        if ((*it)->isGlobalAgg()) return true;
+    return false;
+}
+
+// used by processFormat_X methods
+// returns true if the record passes all of the predicates (and/or)
 bool applyPredicates(predicate_vec& pv, sky_rec& rec) {
 
     bool rowpass = false;
@@ -3837,7 +3642,7 @@ bool applyPredicates(predicate_vec& pv, sky_rec& rec) {
                 if (p->isGlobalAgg())
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
-                    colpass = compare(colval,predval,p->opType());
+                    colpass = compare(static_cast<uint64_t>(colval),static_cast<uint64_t>(predval),p->opType());
                 break;
             }
 
@@ -4056,289 +3861,15 @@ bool applyPredicates(predicate_vec& pv, sky_rec& rec) {
     return rowpass;
 }
 
-bool applyPredicates_fbu_cols(predicate_vec& pv, sky_col_fbu& skycol, uint64_t col_index, uint64_t rid) {
+<<<<<<< HEAD
+<<<<<<< HEAD
+bool applyPredicates_fbu_row(predicate_vec& pv, sky_rec_fbu& rec) {
+=======
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 
-    bool rowpass        = false;
-    bool init_rowpass   = false;
-    auto this_col       = skycol.data_fbu_col;
-    auto curr_col_data  = this_col->data();
-    //auto curr_col_data_type  = this_col->data_type();
-    //auto curr_col_data_type_sky = FBU_TO_SDT.at(curr_col_data_type);
-
-    for (auto it = pv.begin(); it != pv.end(); ++it) {
-
-        int chain_optype = (*it)->chainOpType();
-
-        if (!init_rowpass) {
-            if (chain_optype == SOT_logical_or)
-                rowpass = false;
-            else if (chain_optype == SOT_logical_and)
-                rowpass = true;
-            else
-                rowpass = true;  // default to logical AND
-            init_rowpass = true;
-        }
-
-        if ((chain_optype == SOT_logical_and) and !rowpass) return rowpass;
-
-        bool colpass = false;
-        switch((*it)->colType()) {
-/*
-            // NOTE: predicates have typed ints but our int comparison
-            // functions are defined on 64bit ints.
-            case SDT_BOOL: {
-                TypedPredicate<bool>* p = \
-                        dynamic_cast<TypedPredicate<bool>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                bool colval = row[0].AsBool();
-                bool predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_INT8: {
-                TypedPredicate<int8_t>* p = \
-                        dynamic_cast<TypedPredicate<int8_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                int8_t colval = row[0].AsInt8();
-                int8_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-
-            case SDT_INT16: {
-                TypedPredicate<int16_t>* p = \
-                        dynamic_cast<TypedPredicate<int16_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                int16_t colval = row[0].AsInt16();
-                int16_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-
-            case SDT_INT32: {
-                TypedPredicate<int32_t>* p = \
-                        dynamic_cast<TypedPredicate<int32_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                int32_t colval = row[0].AsInt32();
-                int32_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-
-            case SDT_INT64: {
-                TypedPredicate<int64_t>* p = \
-                        dynamic_cast<TypedPredicate<int64_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                int64_t colval = 0;
-                if ((*it)->colIdx() == RID_COL_INDEX)
-                    colval = rec.RID;  // RID val not in the row
-                else
-                    colval = row[0].AsInt64();
-                int64_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_UINT8: {
-                TypedPredicate<uint8_t>* p = \
-                        dynamic_cast<TypedPredicate<uint8_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                uint8_t colval = row[0].AsUInt8();
-                uint8_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<uint64_t>(predval),
-                                      p->opType());
-                break;
-            }
-
-            case SDT_UINT16: {
-                TypedPredicate<uint16_t>* p = \
-                        dynamic_cast<TypedPredicate<uint16_t>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                uint16_t colval = row[0].AsUInt16();
-                uint16_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<uint64_t>(predval),
-                                      p->opType());
-                break;
-            }
-*/
-
-            case SDT_UINT32: {
-                TypedPredicate<uint32_t>* p = \
-                        dynamic_cast<TypedPredicate<uint32_t>*>(*it);
-                auto column_of_data =
-                        static_cast< const Tables::SDT_UINT32_FBU* >(curr_col_data);
-                if((unsigned)p->colIdx() != col_index) continue;
-                uint32_t colval = column_of_data->data()->Get(rid);
-                uint32_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<uint64_t>(predval),
-                                      p->opType());
-                break;
-            }
-
-            case SDT_UINT64: {
-                TypedPredicate<uint64_t>* p = \
-                        dynamic_cast<TypedPredicate<uint64_t>*>(*it);
-                auto column_of_data =
-                        static_cast< const Tables::SDT_UINT64_FBU* >(curr_col_data);
-                if((unsigned)p->colIdx() != col_index) continue;
-                uint64_t colval = 0;
-                if ((*it)->colIdx() == RID_COL_INDEX) // RID val not in the row
-                    colval = rid;
-                else
-                    colval = column_of_data->data()->Get(rid);
-                uint64_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_FLOAT: {
-                TypedPredicate<float>* p = \
-                        dynamic_cast<TypedPredicate<float>*>(*it);
-                auto column_of_data =
-                        static_cast< const Tables::SDT_FLOAT_FBU* >(curr_col_data);
-                if((unsigned)p->colIdx() != col_index) continue;
-                float colval = column_of_data->data()->Get(rid);
-                float predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<double>(predval),
-                                      p->opType());
-                break;
-            }
-
-/*
-            case SDT_DOUBLE: {
-                TypedPredicate<double>* p = \
-                        dynamic_cast<TypedPredicate<double>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                double colval = row[0].AsDouble();
-                double predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_CHAR: {
-                TypedPredicate<char>* p= \
-                        dynamic_cast<TypedPredicate<char>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                if (p->opType() == SOT_like) {
-                    // use strings for regex
-                    std::string colval = row[0].AsString().str();
-                    std::string predval = std::to_string(p->Val());
-                    colpass = compare(colval,predval,p->opType(),p->colType());
-                }
-                else {
-                    // use int val comparision method
-                    int8_t colval = row[0].AsInt8();
-                    int8_t predval = p->Val();
-                    if (p->isGlobalAgg())
-                        p->updateAgg(computeAgg(colval,predval,p->opType()));
-                    else
-                        colpass = compare(colval,
-                                          static_cast<int64_t>(predval),
-                                          p->opType());
-                }
-                break;
-            }
-
-            case SDT_UCHAR: {
-                TypedPredicate<unsigned char>* p = \
-                        dynamic_cast<TypedPredicate<unsigned char>*>(*it);
-                if((unsigned)p->colIdx() != col_index) continue;
-                if (p->opType() == SOT_like) {
-                    // use strings for regex
-                    std::string colval = row[0].AsString().str();
-                    std::string predval = std::to_string(p->Val());
-                    colpass = compare(colval,predval,p->opType(),p->colType());
-                }
-                else {
-                    // use int val comparision method
-                    uint8_t colval = row[0].AsUInt8();
-                    uint8_t predval = p->Val();
-                    if (p->isGlobalAgg())
-                        p->updateAgg(computeAgg(colval,predval,p->opType()));
-                    else
-                        colpass = compare(colval,
-                                          static_cast<uint64_t>(predval),
-                                          p->opType());
-                }
-                break;
-            }
-*/
-            case SDT_STRING:
-            case SDT_DATE: {
-                TypedPredicate<std::string>* p = \
-                        dynamic_cast<TypedPredicate<std::string>*>(*it);
-                auto column_of_data =
-                        static_cast< const Tables::SDT_STRING_FBU* >(curr_col_data);
-                if((unsigned)p->colIdx() != col_index) continue;
-                string colval = column_of_data->data()->Get(rid)->str();
-                colpass = compare(colval,p->Val(),p->opType(),p->colType());
-                break;
-            }
-
-            default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
-        }
-
-        // incorporate local col passing into the decision to pass row.
-        switch (chain_optype) {
-            case SOT_logical_or:
-                rowpass |= colpass;
-                break;
-            case SOT_logical_and:
-                rowpass &= colpass;
-                break;
-            default: // should not be reachable
-                rowpass &= colpass;
-        }
-    }
-
-    return rowpass;
-}
-
-//TODO: This function can be merged with applyPredicates
+// used by processArrow methods only
+// returns true if the record passes all of the predicates (and/or)
+// TODO: Merge with applyPredicates, mostly duplicated functionality
 bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& table,
                           int element_index)
 {
@@ -4376,7 +3907,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                 if (p->isGlobalAgg())
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
-                    colpass = compare(static_cast<uint64_t>(colval),static_cast<uint64_t>(predval),p->opType());
+                    colpass = compare(colval,predval,p->opType());
                 break;
             }
 
@@ -4480,9 +4011,13 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                 if (p->isGlobalAgg())
                     p->updateAgg(computeAgg(colval,predval,p->opType()));
                 else
+<<<<<<< HEAD
+                    colpass = compare(colval,predval,p->opType());
+=======
                     colpass = compare(colval,
                                       static_cast<uint64_t>(predval),
                                       p->opType());
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
                 break;
             }
 
@@ -4610,269 +4145,11 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
 }
 
 <<<<<<< HEAD
-bool applyPredicates_fbu_row(predicate_vec& pv, sky_rec_fbu& rec) {
-
-    bool rowpass = false;
-    bool init_rowpass = false;
-    auto row = rec.data_fbu_rows;
-
-    for (auto it = pv.begin(); it != pv.end(); ++it) {
-
-        int chain_optype = (*it)->chainOpType();
-
-        if (!init_rowpass) {
-            if (chain_optype == SOT_logical_or)
-                rowpass = false;
-            else if (chain_optype == SOT_logical_and)
-                rowpass = true;
-            else
-                rowpass = true;  // default to logical AND
-            init_rowpass = true;
-        }
-
-        if ((chain_optype == SOT_logical_and) and !rowpass) break;
-
-        bool colpass = false;
-
-        switch((*it)->colType()) {
-
-            // NOTE: predicates have typed ints but our int comparison
-            // functions are defined on 64bit ints.
-/* not yet supported in fbu
-            case SDT_BOOL: {
-                TypedPredicate<bool>* p = \
-                        dynamic_cast<TypedPredicate<bool>*>(*it);
-                bool colval = row[p->colIdx()].AsBool();
-                bool predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-            se SDT_INT8: {
-                TypedPredicate<int8_t>* p = \
-                        dynamic_cast<TypedPredicate<int8_t>*>(*it);
-                int8_t colval = row[p->colIdx()].AsInt8();
-                int8_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-            se SDT_INT16: {
-                TypedPredicate<int16_t>* p = \
-                        dynamic_cast<TypedPredicate<int16_t>*>(*it);
-                int16_t colval = row[p->colIdx()].AsInt16();
-                int16_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-            se SDT_INT32: {
-                TypedPredicate<int32_t>* p = \
-                        dynamic_cast<TypedPredicate<int32_t>*>(*it);
-                int32_t colval = row[p->colIdx()].AsInt32();
-                int32_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<int64_t>(predval),
-                                      p->opType());
-                break;
-            }
-            se SDT_INT64: {
-                TypedPredicate<int64_t>* p = \
-                        dynamic_cast<TypedPredicate<int64_t>*>(*it);
-                int64_t colval = 0;
-                if ((*it)->colIdx() == RID_COL_INDEX)
-                    colval = rec.RID;  // RID val not in the row
-                else
-                    colval = row[p->colIdx()].AsInt64();
-                int64_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-            se SDT_UINT8: {
-                TypedPredicate<uint8_t>* p = \
-                        dynamic_cast<TypedPredicate<uint8_t>*>(*it);
-                uint8_t colval = row[p->colIdx()].AsUInt8();
-                uint8_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<uint64_t>(predval),
-                                      p->opType());
-                break;
-            }
-            se SDT_UINT16: {
-                TypedPredicate<uint16_t>* p = \
-                        dynamic_cast<TypedPredicate<uint16_t>*>(*it);
-                uint16_t colval = row[p->colIdx()].AsUInt16();
-                uint16_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<uint64_t>(predval),
-                                      p->opType());
-                break;
-            }
-not yet supported in fbu */
-
-            case SDT_UINT32: {
-                TypedPredicate<uint32_t>* p = \
-                        dynamic_cast<TypedPredicate<uint32_t>*>(*it);
-                uint32_t colval = 0;
-                if ((*it)->colIdx() == RID_COL_INDEX) // RID val not in the row
-                    colval = rec.RID;
-                else {
-                    auto col_data =
-                        static_cast< const Tables::SDT_UINT32_FBU* >(row->Get(p->colIdx()));
-                    colval = col_data->data()->Get(0);
-                }
-                uint32_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_UINT64: {
-                TypedPredicate<uint64_t>* p = \
-                        dynamic_cast<TypedPredicate<uint64_t>*>(*it);
-                uint64_t colval = 0;
-                if ((*it)->colIdx() == RID_COL_INDEX) // RID val not in the row
-                    colval = rec.RID;
-                else {
-                    auto col_data =
-                        static_cast< const Tables::SDT_UINT64_FBU* >(row->Get(p->colIdx()));
-                    colval = col_data->data()->Get(0);
-                }
-                uint64_t predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-
-            case SDT_FLOAT: {
-                TypedPredicate<float>* p = \
-                        dynamic_cast<TypedPredicate<float>*>(*it);
-                auto col_data =
-                    static_cast< const Tables::SDT_FLOAT_FBU* >(row->Get(p->colIdx()));
-                float colval = col_data->data()->Get(0);
-                float predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,
-                                      static_cast<double>(predval),
-                                      p->opType());
-                break;
-            }
-
-/* not yet supported in fbu
-            case SDT_DOUBLE: {
-                TypedPredicate<double>* p = \
-                        dynamic_cast<TypedPredicate<double>*>(*it);
-                double colval = row[p->colIdx()].AsDouble();
-                double predval = p->Val();
-                if (p->isGlobalAgg())
-                    p->updateAgg(computeAgg(colval,predval,p->opType()));
-                else
-                    colpass = compare(colval,predval,p->opType());
-                break;
-            }
-            se SDT_CHAR: {
-                TypedPredicate<char>* p= \
-                        dynamic_cast<TypedPredicate<char>*>(*it);
-                if (p->opType() == SOT_like) {
-                    // use strings for regex
-                    std::string colval = row[p->colIdx()].AsString().str();
-                    std::string predval = std::to_string(p->Val());
-                    colpass = compare(colval,predval,p->opType(),p->colType());
-                }
-                else {
-                    // use int val comparision method
-                    int8_t colval = row[p->colIdx()].AsInt8();
-                    int8_t predval = p->Val();
-                    if (p->isGlobalAgg())
-                        p->updateAgg(computeAgg(colval,predval,p->opType()));
-                    else
-                        colpass = compare(colval,
-                                          static_cast<int64_t>(predval),
-                                          p->opType());
-                }
-                break;
-            }
-            se SDT_UCHAR: {
-                TypedPredicate<unsigned char>* p = \
-                        dynamic_cast<TypedPredicate<unsigned char>*>(*it);
-                if (p->opType() == SOT_like) {
-                    // use strings for regex
-                    std::string colval = row[p->colIdx()].AsString().str();
-                    std::string predval = std::to_string(p->Val());
-                    colpass = compare(colval,predval,p->opType(),p->colType());
-                }
-                else {
-                    // use int val comparision method
-                    uint8_t colval = row[p->colIdx()].AsUInt8();
-                    uint8_t predval = p->Val();
-                    if (p->isGlobalAgg())
-                        p->updateAgg(computeAgg(colval,predval,p->opType()));
-                    else
-                        colpass = compare(colval,
-                                          static_cast<uint64_t>(predval),
-                                          p->opType());
-                }
-                break;
-            }
-not yet supported in fbu */
-            case SDT_STRING:
-            case SDT_DATE: {
-                TypedPredicate<std::string>* p = \
-                        dynamic_cast<TypedPredicate<std::string>*>(*it);
-                auto col_data =
-                    static_cast< const Tables::SDT_STRING_FBU* >(row->Get(p->colIdx()));
-                string colval = col_data->data()->Get(0)->str();
-                colpass = compare(colval,p->Val(),p->opType(),p->colType());
-                break;
-            }
-
-            default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
-        }
-
-        // incorporate local col passing into the decision to pass row.
-        switch (chain_optype) {
-            case SOT_logical_or:
-                rowpass |= colpass;
-                break;
-            case SOT_logical_and:
-                rowpass &= colpass;
-                break;
-            default: // should not be reachable
-                rowpass &= colpass;
-        }
-    } //for
-    return rowpass;
-}
-
 =======
+=======
+// used by processArrow column-wise methods only
+// returns true if the record passes all of the predicates (and/or)
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 void applyPredicatesArrowCol(predicate_vec& pv,
                              std::shared_ptr<arrow::Array> col_array,
                              int col_idx, std::vector<uint32_t>& row_nums)
@@ -5231,6 +4508,10 @@ bool compare(const bool& val1, const bool& val2, const int& op) {
     return false;  // should be unreachable
 }
 
+// for our rocksdb entries, this creates the value portion by padding int
+// values and create a representative string.
+// Format of keys is like IDX_REC:*-LINEITEM:LINENUMBER-ORDERKEY:00000000000000000001-00000000000000000006
+// the data portion of this key is: "00000000000000000001-00000000000000000006"
 std::string buildKeyData(int data_type, uint64_t new_data) {
     std::string data_str = u64tostr(new_data);
     int len = data_str.length();
@@ -5261,6 +4542,11 @@ std::string buildKeyData(int data_type, uint64_t new_data) {
     return data_str.substr(pos, len);
 }
 
+// for our rocksdb key, create the prefix based on the index type, the
+// dbschema name (Table Group), the table name, and the cols contained
+// in the key, for multi-col indexes.
+// Format of keys is like IDX_REC:*-LINEITEM:LINENUMBER-ORDERKEY:00000000000000000001-00000000000000000006
+// the prefix portion of this key is: "IDX_REC:*-LINEITEM:LINENUMBER-ORDERKEY"
 std::string buildKeyPrefix(
         int idx_type,
         std::string schema_name,
@@ -5331,6 +4617,7 @@ bool check_predicate_ops(predicate_vec index_preds, int opType)
     return true;
 }
 
+// check if all predicates contain equality ops
 bool check_predicate_ops_all_include_equality(predicate_vec index_preds)
 {
     for (unsigned i = 0; i < index_preds.size(); i++) {
@@ -5346,6 +4633,7 @@ bool check_predicate_ops_all_include_equality(predicate_vec index_preds)
     return true;
 }
 
+// check if all predicates contain only equal op
 bool check_predicate_ops_all_equality(predicate_vec index_preds)
 {
     for (unsigned i = 0; i < index_preds.size(); i++) {
@@ -5920,12 +5208,14 @@ int split_arrow_table(std::shared_ptr<arrow::Table> &table, int max_rows,
         metadata->Append(ToString(METADATA_TABLE_NAME),
                          orig_metadata->value(METADATA_TABLE_NAME));
 
-        if (remaining_rows <= max_rows)
+        if (remaining_rows <= max_rows) {
             metadata->Append(ToString(METADATA_NUM_ROWS),
                              std::to_string(remaining_rows));
-        else
+        }
+        else {
             metadata->Append(ToString(METADATA_NUM_ROWS),
                              std::to_string(max_rows));
+        }
 
         // Generate the schema for new table using original table schema
         auto schema = std::make_shared<arrow::Schema>(orig_schema->fields(), metadata);
@@ -6903,7 +6193,6 @@ int transform_fb_to_arrow(const char* fb,
         int num_cols = query_schema.size();
         static_cast<arrow::Int64Builder *>(builder_list[ARROW_RID_INDEX(num_cols)])->Append(rec.RID);
         static_cast<arrow::BooleanBuilder *>(builder_list[ARROW_DELVEC_INDEX(num_cols)])->Append(del_vec[i]);
-
     }
 
     // Finalize the arrays holding the data
@@ -6944,28 +6233,6 @@ int transform_arrow_to_fb(const char* data,
     }
     return 0;
 }
-
-/*
- * Function: transform_fbxrows_to_fbucols
- * @param[in] fb      : Flatbuffer to be converted
- * @param[in] size    : Size of the flatbuffer
- * @param[out] errmsg : errmsg buffer
- * @param[out] buffer : arrow table
- * Return Value: error code
- */
-int transform_fbxrows_to_fbucols(const char* fb,
-                                 const size_t fb_size,
-                                 std::string& errmsg,
-                                 flatbuffers::FlatBufferBuilder& flatbldr) {
-    int errcode = 0;
-    sky_root root = getSkyRoot(fb, fb_size);
-    schema_vec sc = schemaFromString(root.data_schema);
-    delete_vector del_vec = root.delete_vec;
-    //uint32_t nrows = root.nrows;
-
-    return errcode;
-} // transform_fbxrows_to_fbucols
-
 
 // a simple func called from a registered cls class method in cls_tabular.cc
 int example_func(int counter) {

@@ -19,7 +19,11 @@ void cls_log_message(std::string msg, bool is_err, int log_level);
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+
+>>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 // used by Arrow format only
 >>>>>>> Add option for results format, added default format type for getSkyRoot, added semi-colon as alternative delim of schema string for schemaFromString, removed xattrs get/set format, change names: row offsets to rows_vector, db_schema to db_schema_name, replaced older printSkyRoot/Rec() functions with new and csv print method for SFT_FLATBUF_FLEX_ROW
 #define STREAM_CAPACITY 1024
