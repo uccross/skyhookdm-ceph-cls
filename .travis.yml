@@ -4,7 +4,8 @@ language: python
 python: 3.7
 services: docker
 install:
-- git clone https://github.com/systemslab/popper /tmp/popper
+- git clone --branch=parser-fixes --depth=3 https://github.com/systemslab/popper /tmp/popper
 - export PYTHONUNBUFFERED=1
 - pip install /tmp/popper/cli
-script: popper run -f ci/wf.yml
+script:
+- popper run --substitution _CEPH_VERSION=luminous --substitution _CEPH_RELEASE=v12.2.12 -f ci/wf.yml

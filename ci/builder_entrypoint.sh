@@ -24,7 +24,7 @@ mkdir -p ./build
 cd build/
 
 if [ -z "$(ls -A ./)" ] || [ "$CMAKE_RECONFIGURE" == "true" ] ; then
-  cmake3 $CMAKE_FLAGS ..
+  cmake $CMAKE_FLAGS ..
 fi
 
 if [ -z "$BUILD_THREADS" ] ; then

@@ -5,29 +5,61 @@
 #   popper run -f ci/wf.yml
 
 steps:
+- id: checkout parent repo
+  uses: docker://alpine/git:v2.24.1
+  runs: ["sh"]
+  args:
+  - -c
+  - |
+    git clone --recursive --depth=1 --branch=skyhookdm-$_CEPH_VERSION https://github.com/uccross/skyhookdm-ceph
+    cp -r CMakeLists.txt src/ skyhookdm-ceph/src/cls/tabular/
+    rm -r CMakeLists.txt src/
+    mv skyhookdm-ceph/* .
+
+
+#- id: build the builder
+#  uses: docker://docker:19.03.10
+#  env:
+#    DOCKER_BUILDKIT: "1"
+#  args:
+#  - build
+#  - --tag=uccross/skyhookdm-builder:$_CEPH_RELEASE
+#  - --build-arg=BUILDKIT_INLINE_CACHE=1
+#  - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
+#  - --file=src/cls/tabular/ci/Dockerfile
+#  - src/cls/tabular/ci
+#
+#
 - id: build libcls_tabular
-  uses: docker://popperized/ceph-builder:skyhook-bionic
+  uses: docker://uccross/skyhookdm-builder:$_CEPH_RELEASE
   args: ["cls_tabular", "run-query", "ceph_test_skyhook_query", "sky_tabular_flatflex_writer"]
   env:
-    CMAKE_FLAGS: -DCMAKE_BUILD_TYPE=MinSizeRel -DWITH_RBD=OFF -DWITH_CEPHFS=OFF -DWITH_RADOSGW=OFF -DWITH_LEVELDB=OFF -DWITH_MANPAGE=OFF -DWITH_RDMA=OFF -DWITH_OPENLDAP=OFF -DWITH_FUSE=OFF -DWITH_LIBCEPHFS=OFF -DWITH_KRBD=OFF -DWITH_LTTNG=OFF -DWITH_BABELTRACE=OFF -DWITH_SYSTEMD=OFF -DWITH_SPDK=OFF -DWITH_CCACHE=ON -DBOOST_J=4
-    BUILD_THREADS: '4'
+    CMAKE_FLAGS: "-DBOOST_J=4 -DWITH_PYTHON3=OFF"
+    BUILD_THREADS: "4"
 
 
-- id: build image with skyhook library in it
-  uses: docker://docker:19.03.3
-  args: ['build', '-t', 'popperized/skyhookdm-libcls:luminous-bionic', '-f', 'ci/Dockerfile', '.']
+- id: extend rook.io image by adding libcls_tabular
+  uses: docker://docker:19.03.10
+  env:
+    DOCKER_BUILDKIT: "1"
+  args:
+  - 'build'
+  - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
+  - --tag=uccross/skyhookdm-ceph:$_CEPH_RELEASE
+  - --file=ci/Dockerfile.rook
+  - .
     # image contains:
-    #   - upstream ceph-mon/ceph-osd packages for luminous/bionic (NOTE: base image has
-    #     to match the base distro used for the builder image)
+    #   - upstream packages for release
     #   - skyhook libcls_tabular library and run-query binary
     #   - runtime dependencies for the above (such as libarrow, libhdf5, etc)
 
 
 - id: run tests
-  uses: docker://popperized/skyhookdm-libcls:luminous-bionic
-  # don't pull because we want to run the image we built above
+  uses: docker://uccross/skyhookdm-ceph:$_CEPH_RELEASE
   skip_pull: true
   runs: ['bash']
+  env:
+    LD_LIBRARY_PATH: /usr/lib64/ceph
   args:
   - -c
   - |
@@ -50,15 +82,6 @@ steps:
     # run test
     exec ceph_test_skyhook_query
 
-# push to registry
-- uses: docker://docker:19.03.3
-  secrets: [DOCKER_USERNAME, DOCKER_PASSWORD]
-  runs: ['/bin/sh']
-  args:
-  - -c
-  - |
-    # only push from master branch
-    if [[ $GIT_BRANCH == "master" ]]; then
-      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-      docker push popperized/skyhookdm-libcls:luminous-bionic
-    fi
+# todo (if branch == $_CEPH_VERSION)
+# - push builder
+# - push skyhook
