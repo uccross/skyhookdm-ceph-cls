@@ -14,9 +14,9 @@
 #include <thread>
 #include <condition_variable>
 #include "include/rados/librados.hpp"
-#include "cls/tabular/cls_tabular.h"
-#include "cls/tabular/cls_tabular_utils.h"
-#include "cls/tabular/cls_tabular_processing.h"
+#include "cls/cls_tabular.h"
+#include "cls/cls_tabular_utils.h"
+#include "cls/cls_tabular_processing.h"
 #include "re2/re2.h"
 
 extern inline uint64_t __getns(clockid_t clock)

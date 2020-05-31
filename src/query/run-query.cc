@@ -10,7 +10,9 @@
 
 #include <fstream>
 #include <boost/program_options.hpp>
-#include "query.h"
+#include "cls/cls_tabular_utils.h"
+#include "query/query.h"
+#include "include/rados/librados.hpp"
 
 namespace po = boost::program_options;
 

@@ -10,8 +10,8 @@
 
 
 #include <fstream>
-#include "query.h"
-#include "../cls/tabular/cls_tabular_utils.h"
+#include "query/query.h"
+#include "cls/cls_tabular_utils.h"
 
 
 static std::string string_ncopy(const char* buffer, std::size_t buffer_size) {
