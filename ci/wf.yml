@@ -5,18 +5,6 @@
 #   popper run -f ci/wf.yml
 
 steps:
-- id: checkout parent repo
-  uses: docker://alpine/git:v2.24.1
-  runs: ["sh"]
-  args:
-  - -c
-  - |
-    git clone --recursive --depth=1 --branch=skyhookdm-$_CEPH_VERSION https://github.com/uccross/skyhookdm-ceph
-    cp -r CMakeLists.txt src/ skyhookdm-ceph/src/cls/tabular/
-    rm -r CMakeLists.txt src/
-    mv skyhookdm-ceph/* .
-
-
 #- id: build the builder
 #  uses: docker://docker:19.03.10
 #  env:
@@ -26,13 +14,13 @@ steps:
 #  - --tag=uccross/skyhookdm-builder:$_CEPH_RELEASE
 #  - --build-arg=BUILDKIT_INLINE_CACHE=1
 #  - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
-#  - --file=src/cls/tabular/ci/Dockerfile
-#  - src/cls/tabular/ci
-#
-#
+#  - --file=ci/Dockerfile.builder
+#  - ci/
+
+
 - id: build libcls_tabular
   uses: docker://uccross/skyhookdm-builder:$_CEPH_RELEASE
-  args: ["cls_tabular", "run-query", "ceph_test_skyhook_query", "sky_tabular_flatflex_writer"]
+  args: ["cls_tabular", "run-query", "ceph_test_skyhook_query"]
   env:
     CMAKE_FLAGS: "-DBOOST_J=4 -DWITH_PYTHON3=OFF"
     BUILD_THREADS: "4"
@@ -46,12 +34,12 @@ steps:
   - 'build'
   - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
   - --tag=uccross/skyhookdm-ceph:$_CEPH_RELEASE
-  - --file=ci/Dockerfile.rook
+  - --file=ci/Dockerfile.release
   - .
     # image contains:
-    #   - upstream packages for release
-    #   - skyhook libcls_tabular library and run-query binary
-    #   - runtime dependencies for the above (such as libarrow, libhdf5, etc)
+    # - upstream packages for release
+    # - skyhook libcls_tabular library and run-query binary
+    # - runtime dependencies for the above (such as libarrow, libhdf5, etc)
 
 
 - id: run tests

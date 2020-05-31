@@ -3,9 +3,32 @@ dist: xenial
 language: python
 python: 3.7
 services: docker
+env:
+- CEPH_VERSION=luminous CEPH_RELEASE=v12.2.12
+
 install:
+
+# install popper
 - git clone --branch=parser-fixes --depth=3 https://github.com/systemslab/popper /tmp/popper
 - export PYTHONUNBUFFERED=1
 - pip install /tmp/popper/cli
+
+# checkout parent ceph repo
+- |
+  git clone \
+    --recursive \
+    --depth 1 \
+    --branch skyhookdm-$CEPH_VERSION \
+    https://github.com/uccross/skyhookdm-ceph
+
+# override submodule contents
+- cp -r CMakeLists.txt src/ skyhookdm-ceph/src/cls/tabular/
+# add ci folder to ceph fork project root
+- cp -r ci/ skyhookdm-ceph/
+
 script:
-- popper run --substitution _CEPH_VERSION=luminous --substitution _CEPH_RELEASE=v12.2.12 -f ci/wf.yml
+- |
+  popper run \
+    --substitution _CEPH_RELEASE=$CEPH_RELEASE \
+    -f skyhookdm-ceph/ci/wf.yml \
+    -w skyhookdm-ceph/
