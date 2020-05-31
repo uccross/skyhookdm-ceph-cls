@@ -517,31 +517,15 @@ void worker_exec_query_op()
     if (debug)
         cout << "DEBUG: query.cc: worker: popped front of ready_ios" << endl;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-    // get returned data out of our Aio State struct
-=======
     // get returned data out of our Aio State struct, used by each query type.
->>>>>>> Add cls_info struct for accounting, simplify cls_tabular processing, remove hep special case, simplify raw result processing in query.cc, capture and ignore empty results for 3 cases: nonexistent object, object empty, object contained no matching results, refactoring, add more debug statements.
     ceph::bufferlist raw_result = s->bl;
 
     // hold unpacked results
     ceph::bufferlist result;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Add debug statements, refactor lock object worker methods.
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-=======
     // contains cls stats such as read time, process time, pushdowns, etc.
     cls_info info;
 
->>>>>>> Add cls_info struct for accounting, simplify cls_tabular processing, remove hep special case, simplify raw result processing in query.cc, capture and ignore empty results for 3 cases: nonexistent object, object empty, object contained no matching results, refactoring, add more debug statements.
     // process result without lock. we own it now.
     lock.unlock();
     dispatch_lock.lock();
@@ -549,70 +533,10 @@ void worker_exec_query_op()
     dispatch_lock.unlock();
     dispatch_cond.notify_one();
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-    //~struct timing times = s->times;
-    //~uint64_t nrows_server_processed = 0;
-    //~uint64_t eval2_start = getns();
-
->>>>>>> Add debug statements, refactor lock object worker methods.
-=======
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
     if (query == "flatbuf") {
 
         using namespace Tables;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        if (debug) {
-            cout << "DEBUG: query.cc: worker: query==flatbuf" << endl;
-            cout << "DEBUG: query.cc: worker: decoding result data start.\n";
-            cout << "DEBUG: query.cc: worker: raw_result.length()=" << raw_result.length() << endl;
-            cout << "DEBUG: query.cc: worker: use_cls=" << use_cls << endl;
-        }
-
-        delete s;  // release aio struct.
-
-        // decode our results if not empty. cases when it could be empty are
-        // (1) cls processing returned zero matching data
-        // (2) result was from a non-existing object/oid
-        // (3) result was from an existing object/oid that contained zero data
-        if (raw_result.length() >0) {
-            ceph::bufferlist::iterator it = raw_result.begin();
-            try {
-                ::decode(result, it);  // unpack the data struct
-            }
-            catch (ceph::buffer::error&) {
-                std::cerr << "DEBUG: query.cc: worker: failed to decode result data into a bufferlist" << std::endl;
-                assert(Tables::TablesErrCodes::EDECODE_BUFFERLIST_FAILURE==0);
-            }
-            if (debug) {
-                cout << "DEBUG: query.cc: worker: decoded result.length()=" << result.length() << endl;
-            }
-        }
-        else {
-            if (debug) {
-                cout << "DEBUG: query.cc: worker: raw_result is empty." << endl;
-            }
-            //times.eval2_ns = getns() - eval2_start;
-            lock.lock();
-            //timings.push_back(times);
-            break;  // capture and ignore case when object does not exist
-        }
-
-<<<<<<< HEAD
-        delete s;  // release aio struct.
-
-        if (debug)
-<<<<<<< HEAD
-=======
-        // get returned data from our Aio State struct
-        ceph::bufferlist result_data;
-        ceph::bufferlist::iterator it = s->bl.begin();
-
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
         if (debug) {
             cout << "DEBUG: query.cc: worker: query==flatbuf" << endl;
             cout << "DEBUG: query.cc: worker: decoding result data start.\n";
@@ -656,172 +580,16 @@ void worker_exec_query_op()
             break;
         }
 
-<<<<<<< HEAD
-        delete s;  // release aio struct.
-
-        if (debug)
-<<<<<<< HEAD
->>>>>>> Add debug statements, refactor lock object worker methods.
-            cout << "DEBUG: query.cc: worker: decoding result data end" << endl;
-
-            /*
-            * NOTE:
-            *
-            * to manually test new formats you can append your new serialized
-            * formatted data as a char* into a bl, then set optional args to
-            * false and specify the format type such as this:
-            * sky_meta meta = getSkyMeta(bl, false, SFT_FLATBUF_FLEX_ROW);
-            *
-            * which creates a new fbmeta from your new type of bl data.
-            * then you can check the fields:
-            * std::cout << "meta.blob_format:" << meta.blob_format << endl;
-            */
-
-            // default usage here assumes the fbmeta is already in the bl
-<<<<<<< HEAD
-<<<<<<< HEAD
-            sky_meta meta = getSkyMeta(&bl);
-
-            // this code block is only used for accounting (rows processed)
-            switch (meta.blob_format) {
-
-                case SFT_FLATBUF_FLEX_ROW:
-                case SFT_ARROW:
-                case SFT_JSON: {
-                    sky_root root = Tables::getSkyRoot(meta.blob_data,
-                                                       meta.blob_size,
-<<<<<<< HEAD
-                                                       SFT_ARROW);
-                    rows_returned += root.nrows;
-                    break;
-                }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                                                       meta.blob_format);
-                    nrows_processed += root.nrows;
-                    rows_returned += root.nrows;
-                    break;
-                }
-
->>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
-                case SFT_FLATBUF_UNION_ROW:
-                case SFT_FLATBUF_UNION_COL: {
-
-                    // extract ptr to meta data blob
-                    const char* blob_dataptr = reinterpret_cast<const char*>(meta.blob_data);
-                    size_t blob_sz = meta.blob_size;
-
-                    // extract bl_seq bufferlist
-                    ceph::bufferlist bl_seq;
-                    bl_seq.append(blob_dataptr, blob_sz);
-
-                    // just need to grab the first bufferlist in the bl_seq
-                    ceph::bufferlist::iterator it_bl_seq = bl_seq.begin();
-
-                    // decode decrements get_remaining by moving itr
-                    ceph::bufferlist bl;
-                    ::decode(bl, it_bl_seq);
-                    const char* dataptr = bl.c_str();
-                    size_t datasz = bl.length();
-
-                    // get the number of rows returned for accounting purposes
-                    sky_root root = getSkyRoot(dataptr, datasz, SFT_FLATBUF_UNION_ROW);
-                    rows_returned += root.nrows;
-                    break;
-                }
-=======
-                case SFT_JSON: {
-                    sky_root root = Tables::getSkyRoot(meta.blob_data, 0);
-                    rows_returned += root.nrows;
-                    break;
-                }
-                case SFT_FLATBUF_UNION_ROW:
-                case SFT_FLATBUF_UNION_COL:
->>>>>>> Reverted the logic for rows returned from Server
-                case SFT_FLATBUF_CSV_ROW:
-                case SFT_PG_TUPLE:
-                case SFT_CSV:
-                default:
-                    assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
-<<<<<<< HEAD
-=======
->>>>>>> Fixed empty table processing on server
-=======
->>>>>>> Reverted the logic for rows returned from Server
-            }
-=======
-=======
->>>>>>> Add debug statements, refactor lock object worker methods.
-        sky_meta meta = getSkyMeta(&result_data);
-
-            //~ // this code block is only used for accounting (rows processed)
-            //~ switch (meta.blob_format) {
-
-                //~ case SFT_FLATBUF_FLEX_ROW:
-                //~ case SFT_ARROW:
-                //~ case SFT_JSON: {
-                    //~ sky_root root = Tables::getSkyRoot(meta.blob_data,
-                                                       //~ meta.blob_size,
-                                                       //~ meta.blob_format);
-                    //~ nrows_processed += root.nrows;
-                    //~ rows_returned += root.nrows;
-                    //~ break;
-                //~ }
-
-                //~ case SFT_FLATBUF_CSV_ROW:
-                //~ case SFT_PG_TUPLE:
-                //~ case SFT_CSV:
-                //~ default:
-                    //~ assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
-            //~ }
-<<<<<<< HEAD
->>>>>>> Add debug statements, refactor lock object worker methods.
-=======
->>>>>>> Add debug statements, refactor lock object worker methods.
-
-            // check if cols to be projected or preds remaining to be applied
-            // TODO: add any global aggs here.
-            bool more_processing = false;
-            if (!use_cls) {
-                // TODO: remove pushed-down preds from sky_qry_preds then we
-                // can remove project flag and just check size of preds here.
-                if ((project_cols != PROJECT_DEFAULT) || (sky_qry_preds.size() > 0)) {
-                    more_processing = true;
-                }
-=======
-            cout << "DEBUG: query.cc: worker: decoding result data finish."
-                 << endl;
-=======
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
         if (debug) {
             cout << "DEBUG: query.cc: worker: decoding result data finish." << endl;
             cout << "DEBUG: query.cc: worker: calling getSkyMeta(&result)." << endl;
         }
-<<<<<<< HEAD
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 
         // the result data should be a single bl with an fbmeta within.
         sky_meta fbmeta = getSkyMeta(&result);
 
         if (debug)
             cout << "DEBUG: query.cc: worker: done with getSkyMeta(&result)." << endl;
-=======
-            cout << "DEBUG: query.cc: worker: decoding result data finish."
-                 << endl;
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-
-        // the result data should be a single bl with an fbmeta within.
-        sky_meta fbmeta = getSkyMeta(&result);
-
-<<<<<<< HEAD
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
-        if (debug)
-            cout << "DEBUG: query.cc: worker: done with getSkyMeta(&result)." << endl;
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 
         // TODO: add any global aggs here.
         // TODO: check if any predicates or projects remain to be applied.
@@ -832,12 +600,9 @@ void worker_exec_query_op()
             // can remove project flag and just check size of preds here.
             if ((project_cols != PROJECT_DEFAULT) || (sky_qry_preds.size() > 0)) {
                 more_processing = true;
-<<<<<<< HEAD
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
             }
         }
 
-<<<<<<< HEAD
         // nothing left to do here, so we just print results
         if (!more_processing) {
 
@@ -845,128 +610,14 @@ void worker_exec_query_op()
                 cout << "DEBUG: query.cc: worker:  !more_processing." << endl;
 
             switch (fbmeta.blob_format) {
-=======
-            }
-        }
-
-        // nothing left to do here, so we just print results
-        if (!more_processing) {
-
-<<<<<<< HEAD
-            switch (meta.blob_format) {
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
-            if (debug)
-                cout << "DEBUG: query.cc: worker:  !more_processing." << endl;
-
-            switch (fbmeta.blob_format) {
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
                 case SFT_JSON:
                 case SFT_FLATBUF_FLEX_ROW:
                 case SFT_ARROW: {
 
                     sky_root root = \
-<<<<<<< HEAD
-<<<<<<< HEAD
                         Tables::getSkyRoot(fbmeta.blob_data,
                                            fbmeta.blob_size,
                                            fbmeta.blob_format);
-
-                    result_count += root.nrows;
-
-                    print_data(fbmeta.blob_data,
-                               fbmeta.blob_size,
-                               fbmeta.blob_format);
-                    break;
-                }
-                case SFT_FLATBUF_CSV_ROW:
-                case SFT_PG_TUPLE:
-                case SFT_CSV:
-                default:
-                    assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
-            }
-        }
-        else {
-
-            if (debug)
-                cout << "DEBUG: query.cc: worker:  more_processing." << endl;
-
-            // more processing to do such as min, sort, any other remaining preds.
-            std::string errmsg;
-
-            switch (fbmeta.blob_format) {
-
-            case SFT_FLATBUF_FLEX_ROW: {
-
-                if (debug)
-                    cout << "DEBUG: query.cc: worker:  case SFT_FLATBUF_FLEX_ROW." << endl;
-
-                flatbuffers::FlatBufferBuilder flatbldr(1024); // pre-alloc
-                int ret = processSkyFb(flatbldr,
-                                       sky_tbl_schema,
-                                       sky_qry_schema,
-                                       sky_qry_preds,
-                                       fbmeta.blob_data,
-                                       fbmeta.blob_size,
-                                       errmsg);
-                if (ret != 0) {
-                    std::cerr << "ERROR: query.cc: processSkyFb: "
-                              << errmsg << "\n ERR=" << ret
-                              << endl;
-                    assert(Tables::TablesErrCodes::ECLIENTSIDE_PROCESSING_FAILURE==0);
-=======
-            // nothing left to do here, so we just print results
-            if (!more_processing) {
-
-                switch (meta.blob_format) {
-                    case SFT_JSON:
-                    case SFT_FLATBUF_FLEX_ROW:
-                    case SFT_ARROW: {
-
-                        sky_root root = \
-                            Tables::getSkyRoot(meta.blob_data,
-                                               meta.blob_size,
-                                               meta.blob_format);
-
-                        result_count += root.nrows;
-
-                        print_data(meta.blob_data,
-                                   meta.blob_size,
-                                   meta.blob_format);
-                        break;
-                    }
-                    case SFT_FLATBUF_CSV_ROW:
-                    case SFT_PG_TUPLE:
-                    case SFT_CSV:
-                    default:
-                        assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
->>>>>>> Add debug statements, refactor lock object worker methods.
-                }
-
-                // TODO: we should be using uint8_t here
-                const char* processed_data = \
-                    reinterpret_cast<const char*>(flatbldr.GetBufferPointer());
-                sky_root root = getSkyRoot(processed_data, 0);
-                result_count += root.nrows;
-                print_data(processed_data, 0, SFT_FLATBUF_FLEX_ROW);
-                break;
-            }
-
-<<<<<<< HEAD
-            case SFT_ARROW: {
-
-                if (debug)
-                    cout << "DEBUG: query.cc: worker:  case SFT_ARROW." << endl;
-
-=======
-                        Tables::getSkyRoot(meta.blob_data,
-                                           meta.blob_size,
-                                           meta.blob_format);
-=======
-                        Tables::getSkyRoot(fbmeta.blob_data,
-                                           fbmeta.blob_size,
-                                           fbmeta.blob_format);
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 
                     result_count += root.nrows;
 
@@ -1022,134 +673,18 @@ void worker_exec_query_op()
             }
 
             case SFT_ARROW: {
-<<<<<<< HEAD
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
 
                 if (debug)
                     cout << "DEBUG: query.cc: worker:  case SFT_ARROW." << endl;
 
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
                 std::shared_ptr<arrow::Table> table;
                 int ret = processArrowCol(
                               &table,
                               sky_tbl_schema,
                               sky_qry_schema,
                               sky_qry_preds,
-<<<<<<< HEAD
-<<<<<<< HEAD
                               fbmeta.blob_data,
                               fbmeta.blob_size,
-                              errmsg);
-                if (ret != 0) {
-                    std::cerr << "ERROR: query.cc: processArrowCol: "
-                              << errmsg << "\n ERR=" << ret
-                              << endl;
-                    assert(Tables::TablesErrCodes::ECLIENTSIDE_PROCESSING_FAILURE==0);
-                }
-                else {
-                    std::shared_ptr<arrow::Buffer> buffer;
-                    auto schema = table->schema();
-                    auto metadata = schema->metadata();
-                    result_count += std::stoi(metadata->value(METADATA_NUM_ROWS));
-                    convert_arrow_to_buffer(table, &buffer);
-                    print_data(buffer->ToString().c_str(), buffer->size(), SFT_ARROW);
-=======
-                // more processing to do such as min, sort, any other remaining preds.
-                std::string errmsg;
-
-                switch (meta.blob_format) {
-
-                    case SFT_FLATBUF_FLEX_ROW: {
-                        flatbuffers::FlatBufferBuilder flatbldr(1024); // pre-alloc
-                        int ret = processSkyFb(flatbldr,
-                                               sky_tbl_schema,
-                                               sky_qry_schema,
-                                               sky_qry_preds,
-                                               meta.blob_data,
-                                               meta.blob_size,
-                                               errmsg);
-                        if (ret != 0) {
-                            int more_processing_failure = true;
-                            std::cerr << "ERROR: query.cc: processing flatbuf: "
-                                      << errmsg << "\n Tables::ErrCodes=" << ret
-                                      << endl;
-                            assert(more_processing_failure);
-                        }
-
-                        // TODO: we should be using uint8_t here
-                        const char* processed_data = \
-                            reinterpret_cast<const char*>(flatbldr.GetBufferPointer());
-                        sky_root root = getSkyRoot(processed_data, 0);
-                        result_count += root.nrows;
-                        print_data(processed_data, 0, SFT_FLATBUF_FLEX_ROW);
-                        break;
-                    }
-
-                    case SFT_ARROW: {
-                        std::shared_ptr<arrow::Table> table;
-                        int ret = processArrowCol(
-                                      &table,
-                                      sky_tbl_schema,
-                                      sky_qry_schema,
-                                      sky_qry_preds,
-                                      meta.blob_data,
-                                      meta.blob_size,
-                                      errmsg);
-                        if (ret != 0) {
-                            int more_processing_failure = true;
-                            std::cerr << "ERROR: query.cc: processing arrow: "
-                                      << errmsg << "\n Tables::ErrCodes=" << ret
-                                      << endl;
-                            assert(more_processing_failure);
-                        }
-                        else {
-                            std::shared_ptr<arrow::Buffer> buffer;
-                            auto schema = table->schema();
-                            auto metadata = schema->metadata();
-                            result_count += std::stoi(metadata->value(METADATA_NUM_ROWS));
-                            convert_arrow_to_buffer(table, &buffer);
-                            print_data(buffer->ToString().c_str(), buffer->size(), SFT_ARROW);
-                        }
-                        break;
-                    }
-
-                    case SFT_JSON:  // TODO: call processJSON() here.
-                        break;
-
-                    case SFT_FLATBUF_CSV_ROW:
-                    case SFT_PG_TUPLE:
-                    case SFT_CSV:
-                    default:
-                        assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
->>>>>>> Add debug statements, refactor lock object worker methods.
-                }
-                break;
-            }
-<<<<<<< HEAD
-
-            case SFT_JSON:  // TODO: call processJSON() here.
-                break;
-
-            case SFT_FLATBUF_CSV_ROW:
-            case SFT_PG_TUPLE:
-            case SFT_CSV:
-            default:
-                assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
-            }
-        }
-=======
-        //~} // end process result data.
-
-        delete s;
->>>>>>> Add debug statements, refactor lock object worker methods.
-=======
-                              meta.blob_data,
-                              meta.blob_size,
-=======
-                              fbmeta.blob_data,
-                              fbmeta.blob_size,
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
                               errmsg);
                 if (ret != 0) {
                     std::cerr << "ERROR: query.cc: processArrowCol: "
@@ -1178,7 +713,6 @@ void worker_exec_query_op()
                 assert (Tables::TablesErrCodes::SkyFormatTypeNotRecognized==0);
             }
         }
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
     }
     else if (query == "example") {
 

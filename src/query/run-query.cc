@@ -30,23 +30,15 @@ int main(int argc, char **argv)
 
   // user/client input, trimmed and encoded to skyhook structs for query_op
   // defaults set below via boost::program_options
-<<<<<<< HEAD
-<<<<<<< HEAD
   //bool debug;
-=======
-  bool debug;
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-=======
-  //bool debug;
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
   bool index_read;
   bool index_create;
   bool mem_constrain;
   bool text_index_ignore_stopwords;
   bool lock_op;
   int index_plan_type;
-  int trans_layout_type;
-  std::string trans_layout_str;
+  int trans_format_type;
+  std::string trans_format_str;
   std::string text_index_delims;
   std::string db_schema_name;
   std::string table_name;
@@ -163,41 +155,10 @@ int main(int argc, char **argv)
     ("index-ignore-stopwords", po::bool_switch(&text_index_ignore_stopwords)->default_value(false), "Ignore stopwords when building text index. (def=false)")
     ("index-plan-type", po::value<int>(&index_plan_type)->default_value(Tables::SIP_IDX_STANDARD), "If 2 indexes, for intersection plan use '2', for union plan use '3' (def='1')")
     ("runstats", po::bool_switch(&runstats)->default_value(false), "Run statistics on the specified table name")
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    ("transform-layout-type", po::value<std::string>(&trans_layout_str)->default_value("flatbuffer"), "Destination layout type ")
-=======
-    ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record headers and metadata.")
->>>>>>> skyhook: Added printAsCsv function, for Postgres file_fdw usage, also print switch in prep to support multiple data formats such as flatbuf, flexbuf, arrow, etc. Verbose printing flag for debug full record metata, otherwise only raw csv data printed. Added atomic flag to print csv header (schema) only once.
-=======
-    ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record metadata.")
-    ("header", po::bool_switch(&header)->default_value(false), "Print row header (i.e., row schema")
-    ("limit", po::value<long long int>(&row_limit)->default_value(Tables::ROW_LIMIT_DEFAULT), "SQL limit option, limit num_rows of result set")
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
-=======
-    ("result-format", po::value<int>(&resformat)->default_value((int)SkyFormatType::SFT_FLATBUF_FLEX_ROW), "desired SkyFormatType (enum) of results")
-
->>>>>>> Add option for results format, added default format type for getSkyRoot, added semi-colon as alternative delim of schema string for schemaFromString, removed xattrs get/set format, change names: row offsets to rows_vector, db_schema to db_schema_name, replaced older printSkyRoot/Rec() functions with new and csv print method for SFT_FLATBUF_FLEX_ROW
-  ;
-=======
-    ("result-format", po::value<int>(&resformat)->default_value((int)SkyFormatType::SFT_FLATBUF_FLEX_ROW), "SkyFormatType (enum) of processed results (def=SFT_FLATBUF_FLEX_ROW")
-    ("output-format", po::value<std::string>(&output_format)->default_value("SFT_CSV"), "Final output format type enum SkyFormatType (def=csv)")
-=======
     ("transform-format-type", po::value<std::string>(&trans_format_str)->default_value("SFT_FLATBUF_FLEX_ROW"), "Destination format type ")
     ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record metadata.")
     ("header", po::bool_switch(&header)->default_value(false), "Print row header (i.e., row schema")
     ("limit", po::value<long long int>(&row_limit)->default_value(Tables::ROW_LIMIT_DEFAULT), "SQL limit option, limit num_rows of result set")
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-=======
-    ("transform-format-type", po::value<std::string>(&trans_format_str)->default_value("SFT_FLATBUF_FLEX_ROW"), "Destination format type ")
-    ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record metadata.")
-    ("header", po::bool_switch(&header)->default_value(false), "Print row header (i.e., row schema")
-    ("limit", po::value<long long int>(&row_limit)->default_value(Tables::ROW_LIMIT_DEFAULT), "SQL limit option, limit num_rows of result set")
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
     ("example-counter", po::value<int>(&example_counter)->default_value(100), "Loop counter for example function")
     ("example-function-id", po::value<int>(&example_function_id)->default_value(1), "CLS function identifier for example function")
     ("oid-prefix", po::value<std::string>(&oid_prefix)->default_value("obj"), "Prefix to enumerated object ids (names) (def=obj)")
@@ -212,7 +173,6 @@ int main(int argc, char **argv)
     ("lock-obj-create", po::bool_switch(&lock_obj_create)->default_value(false), "Create Lock obj")
     ("client-format", po::value<std::string>(&client_format_str)->default_value("SFT_ANY"), "Data format type to return to client (def=SFT_ANY)")
  ;
->>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
 
   po::options_description all_opts("Allowed options");
   all_opts.add(gen_opts);
@@ -292,18 +252,6 @@ int main(int argc, char **argv)
     return 0;
   }
 
-<<<<<<< HEAD
-  // Get the destination object type for the transform operation
-  if (trans_layout_str == "flatbuffer") {
-    trans_layout_type = LAYOUT_FLATBUFFER;
-  } else if (trans_layout_str == "arrow") {
-    trans_layout_type = LAYOUT_ARROW;
-  } else {
-    assert(0);
-  }
-
-=======
->>>>>>> Updated steps for cloudlab, added check for Parquet type, added input touppercase for tranform op, moved that within input verify block.
   /*
    * sanity check queries against provided parameters
    */
@@ -429,15 +377,7 @@ int main(int argc, char **argv)
             break;
         }
         default:
-<<<<<<< HEAD
-<<<<<<< HEAD
             assert(Tables::TablesErrCodes::EINVALID_OUTPUT_FORMAT);
-=======
-            assert(Tables::TablesErrCodes::EINVALID_CLIENT_FORMAT);
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-=======
-            assert(Tables::TablesErrCodes::EINVALID_OUTPUT_FORMAT);
->>>>>>> Add debug print out predicates, update output format error code.
     }
 
     // below we convert user input to skyhook structures for error checking,
@@ -661,36 +601,7 @@ int main(int argc, char **argv)
     idx_op_idx_schema = schemaToString(sky_idx_schema);
     idx_op_ignore_stopwords = text_index_ignore_stopwords;
     idx_op_text_delims = text_index_delims;
-    trans_op_type = trans_layout_type;
-
-    if (debug) {
-        if (query == "flatbuf" || query == "fastpath") {
-            cout << "DEBUG: run-query: qop_fastpath=" << qop_fastpath << endl;
-            cout << "DEBUG: run-query: qop_index_read=" << qop_index_read << endl;
-            cout << "DEBUG: run-query: qop_index_type=" << qop_index_type << endl;
-            cout << "DEBUG: run-query: qop_index2_type=" << qop_index2_type << endl;
-            cout << "DEBUG: run-query: qop_index_plan_type=" << qop_index_plan_type << endl;
-            cout << "DEBUG: run-query: qop_index_batch_size=" << qop_index_batch_size << endl;
-            cout << "DEBUG: run-query: qop_db_schema_name=" << qop_db_schema_name << endl;
-            cout << "DEBUG: run-query: qop_table_name=" << qop_table_name << endl;
-            cout << "DEBUG: run-query: qop_data_schema=\n" << qop_data_schema << endl;
-            cout << "DEBUG: run-query: qop_query_schema=\n" << qop_query_schema << endl;
-            cout << "DEBUG: run-query: qop_index_schema=\n" << qop_index_schema << endl;
-            cout << "DEBUG: run-query: qop_index2_schema=\n" << qop_index2_schema << endl;
-            cout << "DEBUG: run-query: qop_query_preds=" << qop_query_preds << endl;
-            cout << "DEBUG: run-query: qop_index_preds=" << qop_index_preds << endl;
-            cout << "DEBUG: run-query: qop_index2_preds=" << qop_index2_preds << endl;
-            cout << "DEBUG: run-query: qop_result_format=" << qop_result_format << endl;
-        }
-        else if (index_create or index_read) {
-            cout << "DEBUG: run-query: idx_op_idx_unique=" << idx_op_idx_unique << endl;
-            cout << "DEBUG: run-query: idx_op_batch_size=" << idx_op_batch_size << endl;
-            cout << "DEBUG: run-query: idx_op_idx_type=" << idx_op_idx_type << endl;
-            cout << "DEBUG: run-query: idx_op_idx_schema=" << idx_op_idx_schema << endl;
-            cout << "DEBUG: run-query: idx_op_ignore_stopwords=" << idx_op_ignore_stopwords << endl;
-            cout << "DEBUG: run-query: idx_op_text_delims=" << idx_op_text_delims << endl;
-        }
-    }
+    trans_op_format_type = trans_format_type;
 
     if (debug) {
         if (query == "flatbuf" || query == "fastpath") {
@@ -862,140 +773,6 @@ int main(int argc, char **argv)
     return 0;
   }
 
-<<<<<<< HEAD
-    if (lock_op) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-      int nthreads=1; 
-	// check which lock-op flag is set
-<<<<<<< HEAD
-	if (lock_obj_init) { 
-            // setup and encode our op params here.
-	    lockobj_info op;
-	    op.table_name = table_name;
-	    op.num_objs = num_objs;
-	    op.table_busy = true;
-	    op.table_group = db_schema_name;
-            ceph::bufferlist inbl;
-            ::encode(op, inbl);
-
-            // kick off the workers
-            std::vector<std::thread> threads;
-	    // wthreads is hardcoded to 1.
-=======
-      if (lock_obj_init) { 
-        // setup and encode our op params here.
-	  lockobj_info op;
-	  op.table_name = table_name;
-	  op.num_objs = num_objs;
-	  op.table_busy = false;
-	  op.table_group = db_schema_name;
-          ceph::bufferlist inbl;
-          ::encode(op, inbl);
-
-          // kick off the workers
-          std::vector<std::thread> threads;
-	  // wthreads is hardcoded to 1.
->>>>>>> Space and Indentation fixes
-	
-          for (int i = 0; i < nthreads; i++) {
-            auto ioctx = new librados::IoCtx;
-            int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
-            checkret(ret, 0);
-            threads.push_back(std::thread(worker_lock_obj_init_op, ioctx, op));
-          }
-
-          for (auto& thread : threads) {
-            thread.join();
-          }
-          return 0;
-	} else if (lock_obj_free) {
-            // setup and encode our op params here
-<<<<<<< HEAD
-	    lockobj_info op;
-	    op.table_name = table_name;
-	    op.num_objs = num_objs;
-	    op.table_busy = false;
-	    op.table_group = db_schema_name;
-            ceph::bufferlist inbl;
-            ::encode(op, inbl);
-
-            // kick off the workers
-            std::vector<std::thread> threads;
-	    // wthreads is hardcoded to 1.
-=======
-	  lockobj_info op;
-	  op.table_name = table_name;
-	  op.num_objs = num_objs;
-	  op.table_busy = true;
-	  op.table_group = db_schema_name;
-          ceph::bufferlist inbl;
-          ::encode(op, inbl);
-
-          // kick off the workers
-          std::vector<std::thread> threads;
-	  // wthreads is hardcoded to 1.
->>>>>>> Space and Indentation fixes
-	
-          for (int i = 0; i < nthreads; i++) {
-            auto ioctx = new librados::IoCtx;
-            int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
-            checkret(ret, 0);
-=======
-
-=======
-
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-        // we only need 1 worker thread to access the single lock obj.
-        std::vector<std::thread> threads;
-        auto ioctx = new librados::IoCtx;
-        int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
-        checkret(ret, 0);
-        ceph::bufferlist inbl;
-
-        // check which lock-op is set and setup and encode our op params here.
-        if (lock_obj_init) {
-            lockobj_info op(false, num_objs, table_name,db_schema_name);
-            threads.push_back(std::thread(worker_lock_obj_init_op, ioctx, op));
-            if (debug)
-                cout << "DEBUG: lock_obj_init op=" << op.toString() << endl;
-        }
-        else if (lock_obj_free){
-            lockobj_info op(true, num_objs, table_name,db_schema_name);
-<<<<<<< HEAD
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-=======
->>>>>>> Add debug option to run-query.  Refactor lock object init/set code.
-            threads.push_back(std::thread(worker_lock_obj_free_op, ioctx, op));
-            if (debug)
-                cout << "DEBUG: lock_obj_free op=" << op.toString() << endl;
-        }
-        else if (lock_obj_get){
-            lockobj_info op(true, num_objs, table_name,db_schema_name);
-            threads.push_back(std::thread(worker_lock_obj_get_op, ioctx, op));
-            if (debug)
-                cout << "DEBUG: lock_obj_get op=" << op.toString() << endl;
-        }
-        else if (lock_obj_acquire){
-            lockobj_info op(true, num_objs, table_name,db_schema_name);
-            threads.push_back(std::thread(worker_lock_obj_acquire_op, ioctx, op));
-            if (debug)
-                cout << "DEBUG: lock_obj_acquire op=" << op.toString() << endl;
-        }
-        else if (lock_obj_create){
-            lockobj_info op(false, num_objs, table_name,db_schema_name);
-            threads.push_back(std::thread(worker_lock_obj_create_op, ioctx, op));
-            if (debug)
-                cout << "DEBUG: lock_obj_create op=" << op.toString() << endl;
-        }
-        else {
-            cout << "lock_op unknown" << endl;
-        }
-
-        for (auto& thread : threads) {
-            thread.join();
-        }
-=======
   // for LOCK OPERATION jobs
   // there are several flavors such as lock init, free, etc.
   if (lock_op) {
@@ -1041,7 +818,6 @@ int main(int argc, char **argv)
     else {
         cout << "lock_op unknown" << endl;
     }
->>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 
     for (auto& thread : threads) {
         thread.join();

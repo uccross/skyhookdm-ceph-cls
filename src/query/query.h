@@ -103,28 +103,19 @@ extern int idx_op_idx_type;
 extern std::string idx_op_idx_schema;
 extern std::string idx_op_text_delims;
 
-<<<<<<< HEAD
 // Transform op params
-extern int trans_op_type;
+extern int trans_op_format_type;
 
-<<<<<<< HEAD
-=======
-=======
 // Example op params
 extern int expl_func_counter;
 extern int expl_func_id;
 
-<<<<<<< HEAD
->>>>>>> Added example cls method for WASM and HEP customizations.
-=======
 // HEP op params
 extern std::string qop_dataset_name;
 extern std::string qop_file_name;
 extern std::string qop_tree_name;
 
->>>>>>> Updated HEP query op client and cls methods.
 // other exec flags
->>>>>>> skyhook: Added printAsCsv function, for Postgres file_fdw usage, also print switch in prep to support multiple data formats such as flatbuf, flexbuf, arrow, etc. Verbose printing flag for debug full record metata, otherwise only raw csv data printed. Added atomic flag to print csv header (schema) only once.
 extern bool runstats;
 extern std::string project_cols;
 

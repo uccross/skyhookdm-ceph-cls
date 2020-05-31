@@ -69,23 +69,13 @@ static std::string string_ncopy(const char* buffer, std::size_t buffer_size) {
 
 // Get fb_seq_num from xattr, if not present set to min val
 static
-<<<<<<< HEAD
-int get_fb_seq_num(cls_method_context_t hctx, int& fb_seq_num) {
-    
-=======
 int get_fb_seq_num(cls_method_context_t hctx, unsigned int& fb_seq_num) {
 
->>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
     bufferlist fb_bl;
     int ret = cls_cxx_getxattr(hctx, "fb_seq_num", &fb_bl);
     if (ret == -ENOENT || ret == -ENODATA) {
-<<<<<<< HEAD
-        fb_seq_num = Tables::FB_SEQ_NUM_MIN;
-        // If fb_seq_num is not present then insert it in xattr. 
-=======
         fb_seq_num = Tables::DATASTRUCT_SEQ_NUM_MIN;
         // If fb_seq_num is not present then insert it in xattr.
->>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
     }
     else if (ret < 0) {
         return ret;
@@ -114,66 +104,8 @@ int set_fb_seq_num(cls_method_context_t hctx, unsigned int fb_seq_num) {
         return ret;
     }
     return 0;
-<<<<<<< HEAD
-} 
-=======
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
-=======
-// Get sky_obj_type from xattr, if not present set to Flatbuffer
-=======
-// Get sky_layout_type from xattr, if not present set to Flatbuffer
->>>>>>> Add methods to compress and split arrow tables
-=======
-=======
-// TODO: remove.
-// get/set format type from fb_meta, instead of xattrs
-/*
->>>>>>> Add option for results format, added default format type for getSkyRoot, added semi-colon as alternative delim of schema string for schemaFromString, removed xattrs get/set format, change names: row offsets to rows_vector, db_schema to db_schema_name, replaced older printSkyRoot/Rec() functions with new and csv print method for SFT_FLATBUF_FLEX_ROW
-// Get sky_format_type from xattr, if not present set to Flatbuffer
->>>>>>> Process arrow table for given query
-static
-int get_sky_format_type(cls_method_context_t hctx, int& format_type) {
-
-    bufferlist bl;
-    int ret = cls_cxx_getxattr(hctx, "sky_format_type", &bl);
-    if (ret < 0) {
-        return ret;
-    }
-    else {
-        try {
-            bufferlist::iterator it = bl.begin();
-            ::decode(format_type, it);
-        } catch (const buffer::error &err) {
-            CLS_ERR("ERROR: cls_tabular:get_sky_format_type: decoding format_type");
-            return -EINVAL;
-        }
-    }
-    return 0;
-}
-// Set object type to xattr
-static
-int set_sky_format_type(cls_method_context_t hctx, int format_type) {
-
-    bufferlist bl;
-    ::encode(format_type, bl);
-    int ret = cls_cxx_setxattr(hctx, "sky_format_type", &bl);
-    if(ret < 0) {
-        return ret;
-    }
-    return 0;
-}
-*/
-
->>>>>>> Added object type as an extended attribute
-=======
->>>>>>> Fixed empty table processing on server
 /*
  * Build a skyhook index, insert to omap.
  * Index types are
@@ -197,48 +129,14 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
     // seems to be an int32 currently.
     const int ceph_bl_encoding_len = sizeof(int32_t);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    // TODO: get curr seq_num from stable counter (xattr)
-    int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
-=======
-    bufferlist fb_bl2;
-=======
->>>>>>> Modular functions to set and get fb_seq_num
-    int fb_seq_num;
-    int r1 = get_fb_seq_num(hctx, fb_seq_num);
-    if( r1 < 0) {
-        CLS_ERR("error getting fb_seq_num entry from xattr %d", r1);
-        return r1;
-=======
-    int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
-=======
     // fb_seq_num is stored in xattrs and used as a stable counter of the
     // current number of fbs in the object.
-<<<<<<< HEAD
-    unsigned int fb_seq_num = Tables::FB_SEQ_NUM_MIN;
->>>>>>> Updated read_fbs_index() to use new get_fb_seq_num() from xattrs function, reset min and max seq values.
-=======
     unsigned int fb_seq_num = Tables::DATASTRUCT_SEQ_NUM_MIN;
->>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
     int ret = get_fb_seq_num(hctx, fb_seq_num);
     if (ret < 0) {
         CLS_ERR("ERROR: exec_build_sky_index_op: fb_seq_num entry from xattr %d", ret);
         return ret;
->>>>>>> Review comments incorporated
     }
-<<<<<<< HEAD
-    else {
-        bufferlist::iterator it = fb_bl2.begin();
-        ::decode(fb_seq_num,it);
-        CLS_LOG(20,"Read from xattr %d", fb_seq_num);
-    }
-    
->>>>>>> changes to store fb_seq_num in xattr
-=======
->>>>>>> Modular functions to set and get fb_seq_num
 
     std::string key_fb_prefix;
     std::string key_data_prefix;
@@ -1055,8 +953,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         return -EINVAL;
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     // remove newlines for cls logging purpose
     std::string msg = op.toString();
     std::replace(msg.begin(), msg.end(), '\n', ' ');
@@ -1065,24 +961,6 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         CLS_LOG(20, "exec_query_op decoded successfully");
         CLS_LOG(20, "exec_query_op op.toString()=%s", op.toString().c_str());
     }
-=======
-    CLS_LOG(20, "exec_query_op decoding op end");
-
-    std::string msg = op.toString();
-    std::replace(msg.begin(), msg.end(), '\n', ' ');
-
-    CLS_LOG(20, "exec_query_op op.toString()=%s", msg.c_str());
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
-    // remove newlines for cls logging purpose
-    std::string msg = op.toString();
-    std::replace(msg.begin(), msg.end(), '\n', ' ');
-
-    if (op.debug) {
-        CLS_LOG(20, "exec_query_op decoded successfully");
-        CLS_LOG(20, "exec_query_op op.toString()=%s", op.toString().c_str());
-    }
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 
     using namespace Tables;
 
@@ -1679,72 +1557,13 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
         } // end while itr>0
 
-<<<<<<< HEAD
-                    // add this result into our results bl
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    ::encode(meta_bl, result_bl);
-                    delete meta_builder;
-
-                    if (op.index_read)
-                        ds_rows_processed = row_nums.size();
-                    else
-<<<<<<< HEAD
-                        ds_rows_processed = root_rows;
-                    break;
-=======
-                        ds_rows_processed = root.nrows;
->>>>>>> Fixed empty table processing on server
-
-                    // add this processed ds to sequence of bls and update counter
-                    rows_processed += ds_rows_processed;
-=======
-                    result_bl = fbmeta_bl;
-                    delete fbmeta_builder;
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-=======
-                    result_bl = fbmeta_bl;
-                    delete fbmeta_builder;
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-                }
-                eval_ns += getns() - start;
-            }
-        }
-    }
-=======
         eval_ns += getns() - eval_start; // add our processing time.
     }  // end for reads
->>>>>>> Add cls_info struct for accounting, simplify cls_tabular processing, remove hep special case, simplify raw result processing in query.cc, capture and ignore empty results for 3 cases: nonexistent object, object empty, object contained no matching results, refactoring, add more debug statements.
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     if (op.debug)
         CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
-<<<<<<< HEAD
-=======
-  CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
-    if (op.debug)
-        CLS_LOG(20, "query_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-  // store timings and result set into output BL
-  //~ ::encode(read_ns, *out);
-  //~ ::encode(eval_ns, *out);
-  //~ ::encode(rows_processed, *out);
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
->>>>>>> Add pushback info, add extensible cls_info struct to replace encoded read and eval ns from cls return data.
-=======
-
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
-  ::encode(result_bl, *out);
-=======
 
     cls_info info (read_ns, eval_ns, "", "");
->>>>>>> Add cls_info struct for accounting, simplify cls_tabular processing, remove hep special case, simplify raw result processing in query.cc, capture and ignore empty results for 3 cases: nonexistent object, object empty, object contained no matching results, refactoring, add more debug statements.
 
     // add both our cls info struct and our result bl to the output buffer.
     ::encode(info, *out);

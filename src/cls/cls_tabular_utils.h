@@ -78,24 +78,11 @@ enum TablesErrCodes {
     ClsResultCodeTrue,
     ClsResultCodeFalse,
     EINVALID_INTERMEDIATE_FORMAT,
-<<<<<<< HEAD
-<<<<<<< HEAD
     EINVALID_OUTPUT_FORMAT,
     EINVALID_TRANSFORM_FORMAT,
     EDECODE_BUFFERLIST_FAILURE,
     ECLIENTSIDE_PROCESSING_FAILURE,
     ESTORAGESIDE_PROCESSING_FAILURE
-<<<<<<< HEAD
-=======
-    EINVALID_CLIENT_FORMAT,
-=======
-    EINVALID_OUTPUT_FORMAT,
->>>>>>> Add more error codes for intermediate and output format.
-    EINVALID_TRANSFORM_FORMAT,
-    EDECODE_BUFFERLIST_FAILURE,
->>>>>>> Add more error codes for intermediate and output format.
-=======
->>>>>>> Simplify cls return data, refactor decoding result from cls and std reads, add more debugging, remove old code, add errcodes
 };
 
 // skyhook data types, as supported by underlying data format
@@ -274,19 +261,9 @@ const std::string IDX_KEY_COLS_DEFAULT = "*";
 const std::string DBSCHEMA_NAME_DEFAULT = "*";
 const std::string TABLE_NAME_DEFAULT = "*";
 const std::string RID_INDEX = "_RID_INDEX_";
-<<<<<<< HEAD
-const int FB_SEQ_NUM_MIN = 1;
-=======
 const int RID_COL_INDEX = -99; // magic number...
-<<<<<<< HEAD
->>>>>>> Added capability for objects to make local decision to use index or not (re-optimize locally - issue #27).  Now checks if index exists, and another placeholder to decide to use it or not (given statistics). Added index existence key for all indexes, now used by existence check function. Fixed index union plan bug when second index produced empty result. Index key prefixes now built just once and passed as params. Moved  index check_predicate() function into tabular_utils. Fixed bug in index range query per Nitesh suggestion.
-=======
 const long long int ROW_LIMIT_DEFAULT = LLONG_MAX;
-<<<<<<< HEAD
->>>>>>> skyhook: added SQL limit flag, atomic row counter, csv char delimiter.
-=======
 const int NULLBITS64T_SIZE = 2;  // len of nullbits vector
->>>>>>> Added skeleton methods for json object format to support json in postgres.
 
 // value used for null in postgres binary
 const int32_t PGNULLBINARY = -1;
@@ -708,57 +685,6 @@ struct rec_table {
 };
 typedef struct rec_table sky_rec;
 
-<<<<<<< HEAD
-struct rec_table_fbu {
-    const int64_t RID;
-    nullbits_vector nullbits;
-    const row_data_ref_fbu_rows data_fbu_rows;
-
-    rec_table_fbu(int64_t _RID,
-                  nullbits_vector _nullbits,
-                  row_data_ref_fbu_rows _data_fbu_rows) :
-        RID(_RID),
-        nullbits(_nullbits),
-        data_fbu_rows(_data_fbu_rows) {
-            // ensure one nullbit per col
-            int num_nullbits = nullbits.size() * sizeof(nullbits[0]) * 8;
-            assert (num_nullbits == MAX_TABLE_COLS);
-        };
-};
-typedef struct rec_table_fbu sky_rec_fbu;
-
-struct col_table_fbu {
-    const int64_t CID;
-    nullbits_vector nullbits;
-    std::vector< uint64_t > cols_rids ;
-    col_fbu data_fbu_col;
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-    col_table_fbu(int64_t _CID, 
-                   nullbits_vector _nullbits, 
-                   std::vector< uint64_t > _cols_rids, 
-                   col_fbu _data_fbu_col) :
-=======
-    col_table_fbu(int64_t _CID,
-                  nullbits_vector _nullbits,
-                  col_fbu _data_fbu_col) :
->>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
-=======
-    col_table_fbu(int64_t _CID,
-                  nullbits_vector _nullbits,
-                  std::vector< uint64_t > _cols_rids,
-                  col_fbu _data_fbu_col) :
->>>>>>> Output Arrow results as Postgres binary format.
-        CID(_CID),
-        nullbits(_nullbits),
-        cols_rids(_cols_rids),
-        data_fbu_col(_data_fbu_col) {};
-};
-typedef struct col_table_fbu sky_col_fbu;
-
-=======
->>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 // holds the result of a read to be done, resulting from an index lookup
 // regarding specific flatbufs+rows to be read or else a seq of all flatbufs
 // for which this struct is used to identify the physical location of the
@@ -957,94 +883,6 @@ bool hasAggPreds(predicate_vec &preds);
 int skyOpTypeFromString(std::string s);
 std::string skyOpTypeToString(int op);
 
-<<<<<<< HEAD
-// for proj, select, fastpath, aggregations: process data and build return fb
-int processSkyFb(
-        flatbuffers::FlatBufferBuilder& flatb,
-        schema_vec& data_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* fb,
-        const size_t fb_size,
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
-int processSkyFbWASM(
-        char* _flatbldr,
-        int _flatbldr_len,
-        char* _data_schema,
-        int _data_schema_len,
-        char* _query_schema,
-        int _query_schema_len,
-        char* _preds,
-        int _preds_len,
-        char* _fb,
-        int _fb_size,
-        char* _errmsg,
-        int _errmsg_len,
-        int* _row_nums,
-        int _row_nums_size);
-
-int processArrow(
-        std::shared_ptr<arrow::Table>* table,
-        schema_vec& tbl_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* dataptr,
-        const size_t datasz,
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
-<<<<<<< HEAD
-int processSkyFb_fbu_rows(
-        flatbuffers::FlatBufferBuilder& flatb,
-        schema_vec& data_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* fb,
-        const size_t fb_size,
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
-int processSkyFb_fbu_cols(
-        ceph::bufferlist,
-        flatbuffers::FlatBufferBuilder& flatb,
-        schema_vec& data_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* fb,
-        const size_t fb_size,
-<<<<<<< HEAD
-=======
-=======
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
->>>>>>> fixed fat finger bork and tested.
-int processArrowCol(
-        std::shared_ptr<arrow::Table>* table,
-        schema_vec& tbl_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* dataptr,
-        const size_t datasz,
->>>>>>> Changed process arrow function
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
-int processArrowColHEP(
-        std::shared_ptr<arrow::Table>* table,
-        schema_vec& tbl_schema,
-        schema_vec& query_schema,
-        predicate_vec& preds,
-        const char* dataptr,
-        const size_t datasz,
-        std::string& errmsg,
-        const std::vector<uint32_t>& row_nums=std::vector<uint32_t>());
-
-inline
-=======
->>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 bool applyPredicates(predicate_vec& pv, sky_rec& rec);
 
 bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& table,

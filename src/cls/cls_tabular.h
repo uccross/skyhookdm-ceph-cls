@@ -17,29 +17,13 @@
 
 void cls_log_message(std::string msg, bool is_err, int log_level);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
 
->>>>>>> Create separate files for cls processing methods, rename query_op worker method to match cls registered method, update cmakefiles with new cls_processing files, remove some older code, remove inline specifier for applyPreds methods.
 // used by Arrow format only
->>>>>>> Add option for results format, added default format type for getSkyRoot, added semi-colon as alternative delim of schema string for schemaFromString, removed xattrs get/set format, change names: row offsets to rows_vector, db_schema to db_schema_name, replaced older printSkyRoot/Rec() functions with new and csv print method for SFT_FLATBUF_FLEX_ROW
 #define STREAM_CAPACITY 1024
 #define ARROW_RID_INDEX(cols) (cols)
 #define ARROW_DELVEC_INDEX(cols) (cols + 1)
 
-<<<<<<< HEAD
-enum layout_type_t {
-    LAYOUT_FLATBUFFER = 1,
-    LAYOUT_ARROW,
-    LAYOUT_INVALID
-};
-
-=======
 // metadata corresponding to struct sky_root table
->>>>>>> Add fb_meta struct as wrapper around all underlying supported data formats stored on disk.
 enum arrow_metadata_t {
     METADATA_SKYHOOK_VERSION = 0,
     METADATA_DATA_SCHEMA_VERSION,
@@ -80,7 +64,6 @@ inline const char* ToString(arrow_metadata_t m)
     }
 }
 
-=======
 // refers to data format stored in objects
 enum SkyFormatType {
     SFT_FLATBUF_FLEX_ROW = 1,
@@ -99,11 +82,6 @@ enum SkyFormatType {
     SFT_ANY
 };
 
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> Added enum for data formats supported, added char and uchar case to regex for string types, updated root_table field names.
-=======
-=======
 
 inline int sky_format_type_from_string (std::string type) {
     std::transform(type.begin(), type.end(), type.begin(), ::toupper);
@@ -123,7 +101,6 @@ inline int sky_format_type_from_string (std::string type) {
     return 0;   // format unrecognized
 }
 
->>>>>>> Added postgres binary fstream output format for SFT_FLAT_FLEX_ROW, fixed counter for row --limit, small edits, removed some extra spaces.
 enum CompressionType {
     none = 0,
     // lzw,  TODO: placeholder, not yet supported.
@@ -131,7 +108,6 @@ enum CompressionType {
     // etc.
 };
 
->>>>>>> Added fb_meta support when unpacking bl from obj read. Added optional args to manually specify type for testing new formats.  Added defaults to some fb_meta fields for future use.
 /*
  * Stores the query request parameters.  This is encoded by the client and
  * decoded by server (osd node) for query processing.
