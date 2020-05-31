@@ -20,16 +20,20 @@ steps:
 
 - id: build libcls_tabular
   uses: docker://uccross/skyhookdm-builder:$_CEPH_RELEASE
-  args: ["cls_tabular", "run-query", "ceph_test_skyhook_query"]
+  runs: ["bash"]
   env:
     CMAKE_FLAGS: "-DBOOST_J=4 -DWITH_PYTHON3=OFF"
     BUILD_THREADS: "4"
+  args:
+  - -c
+  - |
+    /builder_entrypoint.sh cls_tabular
+    /builder_entrypoint.sh run-query
+    /builder_entrypoint.sh ceph_test_skyhook_query
 
 
 - id: extend rook.io image by adding libcls_tabular
   uses: docker://docker:19.03.10
-  env:
-    DOCKER_BUILDKIT: "1"
   args:
   - 'build'
   - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
