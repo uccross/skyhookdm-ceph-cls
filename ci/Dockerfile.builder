@@ -1,6 +1,6 @@
 FROM centos:7.8.2003
 
-ARG CEPH_RELEASE="v14.2.9"
+ARG CEPH_VERSION
 
 # gcc, cmake3, arrow, parquet
 RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm && \
@@ -12,7 +12,7 @@ RUN yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-
     yum install -y \
       devtoolset-8 && \
     # ceph build deps \
-    git clone --depth=1 --branch=${CEPH_RELEASE} https://github.com/ceph/ceph && \
+    git clone --depth=1 --branch=${CEPH_VERSION} https://github.com/ceph/ceph && \
     cd ceph && \
     bash -c '. /opt/rh/devtoolset-8/enable && ./install-deps.sh' && \
     # re2, arrow, parquet \

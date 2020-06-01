@@ -1,10 +1,16 @@
 # SkyhookDM Ceph RADOS Class
 
-This repository is **NOT** intended to be cloned directly. Instead, it is configured 
-as a submodule of <https://github.com/uccross/skyhookdm-ceph>. To clone the parent repo: 
+This repository is **NOT** intended to be cloned directly. Instead, it 
+is configured as a submodule of 
+<https://github.com/uccross/skyhookdm-ceph>. To clone the parent repo:
 
 ```bash
-git clone --recursive --depth 1 --branch skyhookdm-luminous https://github.com/uccross/skyhookdm-ceph
+git clone \
+  --recursive \
+  --shallow-submodules \
+  --depth 1 \
+  --branch skyhookdm-luminous \
+  https://github.com/uccross/skyhookdm-ceph
 ```
 
 and this repo will be available at `src/cls/tabular` within the parent 
@@ -25,7 +31,11 @@ cd skyhookdm-ceph
 [skydh]: https://hub.docker.com/r/uccross/skyhookdm-builder
 
 ```bash
-docker build -t builder -f src/cls/tabular/ci/Dockerfile.builder src/cls/tabular/ci
+docker build \
+  --tag=uccross/skyhookdm-builder:luminous \
+  --build-arg=CEPH_VERSION=luminous \
+  --file=ci/Dockerfile.builder \
+  ci/
 ```
 
 ## build the library

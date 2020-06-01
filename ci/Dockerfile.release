@@ -1,4 +1,4 @@
-ARG CEPH_RELEASE="v14.2.9"
+ARG CEPH_RELEASE
 FROM ceph/ceph:${CEPH_RELEASE}
 
 RUN yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-release-latest.rpm && \

@@ -11,15 +11,15 @@ steps:
 #    DOCKER_BUILDKIT: "1"
 #  args:
 #  - build
-#  - --tag=uccross/skyhookdm-builder:$_CEPH_RELEASE
+#  - --tag=uccross/skyhookdm-builder:$_CEPH_VERSION
 #  - --build-arg=BUILDKIT_INLINE_CACHE=1
-#  - --build-arg=CEPH_RELEASE=$_CEPH_RELEASE
+#  - --build-arg=CEPH_VERSION=$_CEPH_VERSION
 #  - --file=ci/Dockerfile.builder
 #  - ci/
 
 
 - id: build libcls_tabular
-  uses: docker://uccross/skyhookdm-builder:$_CEPH_RELEASE
+  uses: docker://uccross/skyhookdm-builder:$_CEPH_VERSION
   runs: ["bash"]
   env:
     CMAKE_FLAGS: "-DBOOST_J=4 -DWITH_PYTHON3=OFF"
@@ -77,3 +77,4 @@ steps:
 # todo (if branch == $_CEPH_VERSION)
 # - push builder
 # - push skyhook
+# - bump version of git submodule in parent ceph (fork) repo
