@@ -42,7 +42,7 @@ docker build \
 
 ```bash
 docker run --rm -ti \
-  -e CMAKE_FLAGS='-DBOOST_J=16' \
+  -e CMAKE_FLAGS='-DBOOST_J=16 -DWITH_PYTHON3=OFF' \
   -e BUILD_THREADS=16 \
   -v $PWD:/ws \
   -w /ws \
