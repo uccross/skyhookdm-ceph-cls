@@ -1,6 +1,0 @@
-# ignore everything except whatever is whitelisted below
-**/*
-
-!/build/bin/run-query
-!/build/bin/sky_tabular_flatflex_writer
-!/build/lib/libcls_tabular.so*

@@ -1,62 +1,43 @@
 # SkyhookDM Ceph RADOS Class
 
-This repository is **NOT** intended to be cloned directly. Instead, it 
-is configured as a submodule of 
-<https://github.com/uccross/skyhookdm-ceph>. To clone the parent repo:
+## dev setup
+
+Install [Docker][docker-install] and [Popper][popper-install]. Then:
 
 ```bash
-git clone \
-  --recursive \
-  --shallow-submodules \
-  --depth 1 \
-  --branch skyhookdm-luminous \
-  https://github.com/uccross/skyhookdm-ceph
+popper run dev-init
 ```
 
-and this repo will be available at `src/cls/tabular` within the parent 
-`skyhookdm-ceph` repository. All the following steps assume we're 
-inside the repository:
+The above clones ceph and creates symlinks to this project. For more 
+see the [`.popper.yml`](.popper.yml) file.
 
-```bash
-cd skyhookdm-ceph
-```
-
-## build the builder
-
-> **NOTE**: we keep images in the [uccross/skyhookdm-builder][skydh] 
-> dockerhub repository that can be used to build the library (see next section).
-> We include this step for completeness but you can skip it and use 
-> images from this dockerhub repo instead.
-
-[skydh]: https://hub.docker.com/r/uccross/skyhookdm-builder
-
-```bash
-docker build \
-  --tag=uccross/skyhookdm-builder:luminous \
-  --build-arg=CEPH_VERSION=luminous \
-  --file=ci/Dockerfile.builder \
-  ci/
-```
+[docker-install]: https://docs.docker.com/get-docker/
+[popper-install]: https://github.com/getpopper/popper/blob/master/docs/sections/getting_started.md#installation
 
 ## build the library
 
 ```bash
-docker run --rm -ti \
-  -e CMAKE_FLAGS='-DBOOST_J=16 -DWITH_PYTHON3=OFF' \
-  -e BUILD_THREADS=16 \
-  -v $PWD:/ws \
-  -w /ws \
-  uccross/skyhookdm-builder:luminous \
-    cls_tabular
+popper run build
 ```
 
-In the above, the `-DBOOST_J=16` setting is controls the number of build
-jobs used to build boost. The `BUILD_THREADS=16` controls the number of
-jobs for building SkyhookDM library.
+## generate a rook-compatible docker image
 
-## package the library
+```bash
+popper run build-rook-img
+```
 
-**TODO**
+## interactive shell
+
+Any of the commands used above can be executed in interactive mode. 
+For example, to open a shell on the `build` step:
+
+```bash
+popper sh build
+```
+
+The above opens an interactive shell inside an instance of the 
+[builder image](./ci/Dockerfile), which is a pre-built image with all 
+the dependencies needed to build the CLS.
 
 ## try it locally
 

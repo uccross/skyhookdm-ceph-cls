@@ -8,5 +8,5 @@ RUN yum install -y https://apache.bintray.com/arrow/centos/7/apache-arrow-releas
       parquet-devel && \
     yum clean all
 
-COPY build/bin/run-query build/bin/ceph_test_skyhook_query /usr/bin/
-COPY build/lib/libcls_tabular.so.1.0.0 /usr/lib64/rados-classes/
+COPY ceph/build/bin/run-query build/bin/ceph_test_skyhook_query /usr/bin/
+COPY ceph/build/lib/libcls_tabular.so.1.0.0 /usr/lib64/rados-classes/
