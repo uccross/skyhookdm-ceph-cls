@@ -11,7 +11,7 @@ steps:
       --recursive \
       --depth 1 \
       --shallow-submodules \
-      --branch luminous \
+      --branch nautilus \
       https://github.com/ceph/ceph
 
     ln -s ../../../src ceph/src/cls/tabular
@@ -19,7 +19,7 @@ steps:
     echo "add_subdirectory(tabular)" >> ceph/src/cls/CMakeLists.txt
 
 - id: build
-  uses: docker://uccross/skyhookdm-builder:luminous
+  uses: docker://uccross/skyhookdm-builder:nautilus
   runs: [bash]
   env:
     CMAKE_FLAGS: "-DBOOST_J=4 -DWITH_PYTHON3=OFF"
@@ -30,13 +30,13 @@ steps:
   uses: docker://docker:19.03.10
   args:
   - build
-  -   --build-arg=CEPH_RELEASE=v12.2.12
-  -   --tag=uccross/skyhookdm-ceph:v12.2.12
+  -   --build-arg=CEPH_RELEASE=v14.2.9
+  -   --tag=uccross/skyhookdm-ceph:v14.2.9
   -   --file=docker/Dockerfile.release
   -   .
 
 - id: test
-  uses: docker://uccross/skyhookdm-ceph:v12.2.12
+  uses: docker://uccross/skyhookdm-ceph:v14.2.9
   skip_pull: true
   runs: [bash]
   env:
@@ -51,7 +51,7 @@ steps:
   - -c
   - |
     # only push from master branch
-    if [[ $GIT_BRANCH == "master" ]]; then
+    if [[ $GIT_BRANCH == "nautilus" ]]; then
       docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-      docker push uccross/skyhookdm-ceph:v12.2.12
+      docker push uccross/skyhookdm-ceph:v14.2.9
     fi

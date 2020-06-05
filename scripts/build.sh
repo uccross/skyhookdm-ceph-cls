@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source /opt/rh/devtoolset-8/enable
+
 if [ -d "ceph/" ]; then
   echo "Using ceph/ as folder as source folder"
   CEPH_SRC_DIR="ceph"
@@ -20,7 +22,7 @@ mkdir -p ./build
 cd build/
 
 if [ -z "$(ls -A ./)" ] || [ "$CMAKE_RECONFIGURE" == "true" ] || [ "$CMAKE_RECONFIGURE" == "1" ]; then
-  cmake $CMAKE_FLAGS ..
+  cmake3 $CMAKE_FLAGS ..
 fi
 
 if [ -z "$BUILD_THREADS" ] ; then

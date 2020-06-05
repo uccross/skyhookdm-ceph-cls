@@ -1,6 +1,6 @@
 # SkyhookDM Ceph RADOS Class
 
-[![Build Status](https://travis-ci.com/uccross/skyhookdm-ceph-cls.svg?branch=luminous)](https://travis-ci.com/uccross/skyhookdm-ceph-cls)
+[![Build Status](https://travis-ci.com/uccross/skyhookdm-ceph-cls.svg?branch=nautilus)](https://travis-ci.com/uccross/skyhookdm-ceph-cls)
 
 ## dev setup
 
