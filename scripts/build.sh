@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-source /opt/rh/devtoolset-8/enable
-
 if [ -d "ceph/" ]; then
   echo "Using ceph/ as folder as source folder"
   CEPH_SRC_DIR="ceph"

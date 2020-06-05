@@ -30,13 +30,13 @@ steps:
   uses: docker://docker:19.03.10
   args:
   - build
-  -   --build-arg=CEPH_RELEASE=luminous
+  -   --build-arg=CEPH_RELEASE=v12.2.12
   -   --tag=uccross/skyhookdm-ceph:v12.2.12
   -   --file=docker/Dockerfile.release
   -   .
 
 - id: test
-  uses: docker://uccross/skyhookdm-ceph:luminous
+  uses: docker://uccross/skyhookdm-ceph:v12.2.12
   skip_pull: true
   runs: [bash]
   env:

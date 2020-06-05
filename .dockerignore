@@ -1,8 +1,7 @@
-# ignore everything except stuff whitelisted below
+# ignore everything except whatever is whitelisted below
 **/*
 
-!/build/bin/run-query
-!/build/bin/sky_tabular_flatflex_writer
-!/build/bin/ceph_test_skyhook_query
-
-!/build/lib/libcls_tabular.so.1.0.0
+!/ceph/build/bin/run-query
+!/ceph/build/bin/ceph_test_skyhook_query
+!/ceph/build/bin/sky_tabular_flatflex_writer
+!/ceph/build/lib/libcls_tabular.so*

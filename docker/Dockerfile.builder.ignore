@@ -1,4 +1,0 @@
-# ignore everything except whatever is whitelisted below
-**/*
-
-!/ci/builder_entrypoint.sh
