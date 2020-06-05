@@ -22,6 +22,12 @@ see the [`.popper.yml`](.popper.yml) file.
 popper run build
 ```
 
+## run tests
+
+```bash
+popper run test
+```
+
 ## generate a rook-compatible docker image
 
 ```bash
