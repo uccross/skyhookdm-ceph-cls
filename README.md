@@ -1,5 +1,7 @@
 # SkyhookDM Ceph RADOS Class
 
+[![Build Status](https://travis-ci.org/uccross/skyhookdm-ceph-cls.svg?branch=master)](https://travis-ci.org/uccross/skyhookdm-ceph-cls)
+
 ## dev setup
 
 Install [Docker][docker-install] and [Popper][popper-install]. Then:
