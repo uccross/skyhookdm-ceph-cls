@@ -42,3 +42,16 @@ steps:
   env:
     LD_LIBRARY_PATH: /usr/lib64/ceph
   args: [scripts/run_tests.sh]
+
+- id: push-img
+  uses: docker://docker:19.03.3
+  secrets: [DOCKER_USERNAME, DOCKER_PASSWORD]
+  runs: [sh]
+  args:
+  - -c
+  - |
+    # only push from master branch
+    if [[ $GIT_BRANCH == "master" ]]; then
+      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      docker push uccross/skyhookdm-ceph:v12.2.12
+    fi
