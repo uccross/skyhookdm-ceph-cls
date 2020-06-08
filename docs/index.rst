@@ -3,11 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Popper
-======
+SkyhookDM
+=========
 
-Popper is a container-native workflow engine for seamlessly running workflows
-locally and on CI services.
+Documentation for the SkyhookDM project.
 
 .. toctree::
    :maxdepth: 2
