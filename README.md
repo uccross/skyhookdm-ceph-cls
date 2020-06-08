@@ -10,8 +10,11 @@ Install [Docker][docker-install] and [Popper][popper-install]. Then:
 popper run dev-init
 ```
 
-The above clones ceph and creates symlinks to this project. For more 
-see the [`.popper.yml`](.popper.yml) file.
+The above clones ceph and creates symlinks to this project within the 
+ceph tree so that the cls folder is copied to the right place.
+
+> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
+> which contains the definition of what the `dev-init` command does.
 
 [docker-install]: https://docs.docker.com/get-docker/
 [popper-install]: https://github.com/getpopper/popper/blob/master/docs/sections/getting_started.md#installation
@@ -22,17 +25,27 @@ see the [`.popper.yml`](.popper.yml) file.
 popper run build
 ```
 
+> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
+> which contains the definition of what the `build` command does.
+
 ## run tests
 
 ```bash
 popper run test
 ```
 
+> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
+> which contains the definition of what the `test` command does.
+
 ## generate a rook-compatible docker image
 
 ```bash
 popper run build-rook-img
 ```
+
+> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
+> which contains the definition of what the `build-rook-img` command 
+> does.
 
 ## interactive shell
 
