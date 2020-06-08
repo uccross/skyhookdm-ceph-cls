@@ -51,7 +51,7 @@ steps:
   - -c
   - |
     # only push from master branch
-    if [[ $GIT_BRANCH == "nautilus" ]]; then
+    if [[ $GIT_BRANCH == "master" ]]; then
       docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
       docker push uccross/skyhookdm-ceph:v14.2.9
     fi
