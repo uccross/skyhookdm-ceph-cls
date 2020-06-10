@@ -22,7 +22,7 @@ steps:
   uses: docker://uccross/skyhookdm-builder:nautilus
   runs: [bash]
   env:
-    CMAKE_FLAGS: "-DBOOST_J=4"
+    CMAKE_FLAGS: "-DBOOST_J=4 -DDCMAKE_BUILD_TYPE=Release"
     BUILD_THREADS: "4"
   args: [scripts/build.sh]
 
