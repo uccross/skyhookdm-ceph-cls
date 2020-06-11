@@ -7,6 +7,6 @@ services: docker
 install:
 - git clone --depth=1 https://github.com/systemslab/popper /tmp/popper
 - export PYTHONUNBUFFERED=1
-- pip install /tmp/popper/cli
+- pip install /tmp/popper/src
 
 script: popper run
