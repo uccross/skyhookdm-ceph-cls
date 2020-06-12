@@ -29,7 +29,6 @@ cls_handle_t h_class;
 cls_method_handle_t h_exec_query_op;
 cls_method_handle_t h_example_query_op;
 cls_method_handle_t h_test_query_op;
-cls_method_handle_t h_hep_query_op;
 cls_method_handle_t h_wasm_query_op;
 cls_method_handle_t h_exec_runstats_op;
 cls_method_handle_t h_build_index;
@@ -52,6 +51,7 @@ static inline uint64_t __getns(clockid_t clock)
 {
   struct timespec ts;
   int ret = clock_gettime(clock, &ts);
+  (void)ret;
   assert(ret == 0);
   return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
 }
@@ -82,8 +82,9 @@ int get_fb_seq_num(cls_method_context_t hctx, unsigned int& fb_seq_num) {
     }
     else {
         try {
-            bufferlist::iterator it = fb_bl.begin();
-            ::decode(fb_seq_num,it);
+            bufferlist::const_iterator it = fb_bl.begin();
+            using ceph::decode;
+            decode(fb_seq_num,it);
         } catch (const buffer::error &err) {
             CLS_ERR("ERROR: cls_tabular:get_fb_seq_num: decoding fb_seq_num");
             return -EINVAL;
@@ -98,7 +99,8 @@ static
 int set_fb_seq_num(cls_method_context_t hctx, unsigned int fb_seq_num) {
 
     bufferlist fb_bl;
-    ::encode(fb_seq_num, fb_bl);
+    using ceph::encode;
+    encode(fb_seq_num, fb_bl);
     int ret = cls_cxx_setxattr(hctx, "fb_seq_num", &fb_bl);
     if (ret < 0) {
         return ret;
@@ -150,8 +152,9 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
     // extract the index op instructions from the input bl
     idx_op op;
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: exec_build_sky_index_op decoding idx_op");
         return -EINVAL;
@@ -168,13 +171,14 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
 
     // decode and process each wrapped bl (each bl contains 1 flatbuf)
     uint64_t off = 0;
-    ceph::bufferlist::iterator it = wrapped_bls.begin();
+    ceph::bufferlist::const_iterator it = wrapped_bls.begin();
     uint64_t obj_len = it.get_remaining();
     while (it.get_remaining() > 0) {
         off = obj_len - it.get_remaining();
         ceph::bufferlist bl;
         try {
-            ::decode(bl, it);  // unpack the next bl
+            using ceph::decode;
+            decode(bl, it);  // unpack the next bl
         } catch (ceph::buffer::error&) {
             assert(Tables::BuildSkyIndexDecodeBlsErr==0);
         }
@@ -199,7 +203,8 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
         // IDX_FB create the entry struct, encode into bufferlist
         bufferlist fb_bl;
         struct idx_fb_entry fb_ent(off, fb_len + ceph_bl_encoding_len);
-        ::encode(fb_ent, fb_bl);
+        using ceph::encode;
+        encode(fb_ent, fb_bl);
         key = key_fb_prefix + key_data;
         fbs_index[key] = fb_bl;
 
@@ -241,7 +246,8 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
                     // create the entry, encode into bufferlist, update map
                     bufferlist rec_bl;
                     struct idx_rec_entry rec_ent(fb_seq_num, i, rec.RID);
-                    ::encode(rec_ent, rec_bl);
+                    using ceph::encode;
+                    encode(rec_ent, rec_bl);
                     key = key_data_prefix + key_data;
                     recs_index[key] = rec_bl;
                     break;
@@ -270,7 +276,8 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
                     // create the entry, encode into bufferlist, update map
                     bufferlist rec_bl;
                     struct idx_rec_entry rec_ent(fb_seq_num, i, rec.RID);
-                    ::encode(rec_ent, rec_bl);
+                    using ceph::encode;
+                    encode(rec_ent, rec_bl);
                     key = key_data_prefix + key_data;
                     recs_index[key] = rec_bl;
                     break;
@@ -335,7 +342,8 @@ int exec_build_sky_index_op(cls_method_context_t hctx, bufferlist *in, bufferlis
                         bufferlist txt_bl;
                         struct idx_txt_entry txt_ent(fb_seq_num, i,
                                                      rec.RID, word_pos);
-                        ::encode(txt_ent, txt_bl);
+                        using ceph::encode;
+                        encode(txt_ent, txt_bl);
                         key = key_data_prefix + key_data;
                         txt_index[key] = txt_bl;
                         /*CLS_LOG(20,"kv=%s",
@@ -442,8 +450,9 @@ int build_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
   uint32_t batch_size;
 
   try {
-    bufferlist::iterator it = in->begin();
-    ::decode(batch_size, it);
+    bufferlist::const_iterator it = in->begin();
+    using ceph::decode;
+    decode(batch_size, it);
   } catch (const buffer::error &err) {
     CLS_ERR("ERROR: decoding batch_size");
     return -EINVAL;
@@ -481,7 +490,8 @@ int build_index(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     // val
     bufferlist row_offset_bl;
     const size_t row_offset = rid * row_size;
-    ::encode(row_offset, row_offset_bl);
+    using ceph::encode;
+    encode(row_offset, row_offset_bl);
 
     if (index.count(strkey) != 0)
       return -EINVAL;
@@ -532,8 +542,9 @@ update_idx_reads(
     struct idx_rec_entry rec_ent;
     int ret = 0;
     try {
-        bufferlist::iterator it = bl.begin();
-        ::decode(rec_ent, it);
+        bufferlist::const_iterator it = bl.begin();
+        using ceph::decode;
+        decode(rec_ent, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: decoding query idx_rec_ent");
         return -EINVAL;
@@ -562,8 +573,9 @@ update_idx_reads(
 
     if (ret >= 0) {
         try {
-            bufferlist::iterator it = bl1.begin();
-            ::decode(fb_ent, it);
+            bufferlist::const_iterator it = bl1.begin();
+            using ceph::decode;
+            decode(fb_ent, it);
         } catch (const buffer::error &err) {
             CLS_ERR("ERROR: decoding query idx_fb_ent");
             return -EINVAL;
@@ -643,8 +655,9 @@ read_fbs_index(
             // CLS_LOG(20, "omap entry found for key=%s", key.c_str());
             struct idx_fb_entry fb_ent;
             try {
-                bufferlist::iterator it = bl.begin();
-                ::decode(fb_ent, it);
+                bufferlist::const_iterator it = bl.begin();
+                using ceph::decode;
+                decode(fb_ent, it);
             } catch (const buffer::error &err) {
                 CLS_ERR("ERROR: decoding idx_fb_ent for key=%s", key.c_str());
                 return -EINVAL;
@@ -946,8 +959,9 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
     // extract the query op to get the query request params
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: exec_query_op: decoding query op failed");
         return -EINVAL;
@@ -1325,7 +1339,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
         // begin processing, so we record the evaluation time.
         eval_start = getns();
-        ceph::bufferlist::iterator data_itr = b.begin();
+        ceph::bufferlist::const_iterator data_itr = b.begin();
         while (data_itr.get_remaining() > 0) {
 
             // unpack the next data stucture (ds) in sequence
@@ -1337,7 +1351,8 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
             bufferlist data;
             try {
-                ::decode(data, data_itr);
+                using ceph::decode;
+                decode(data, data_itr);
             } catch (const buffer::error &err) {
                 CLS_ERR("ERROR: cls: exec_query_op: decoding data from data_itr (ds sequence");
                 return -EINVAL;
@@ -1566,8 +1581,9 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     cls_info info (read_ns, eval_ns, "", "");
 
     // add both our cls info struct and our result bl to the output buffer.
-    ::encode(info, *out);
-    ::encode(result_bl, *out);
+    using ceph::encode;
+    encode(info, *out);
+    encode(result_bl, *out);
 
     return 0;
 }
@@ -1588,8 +1604,9 @@ int test_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
     // extract the query op to get the query request params
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: decoding query op");
         return -EINVAL;
@@ -1638,7 +1655,8 @@ int test_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                 add_extra_row_cost(op.extra_row_cost);
             }
         }
-        ::encode(result_count, result_bl);  // store count into our result set.
+        using ceph::encode;
+        encode(result_count, result_bl);  // store count into our result set.
     }
     else if (op.query == "b") {  // range query on extended_price col
 
@@ -1710,9 +1728,10 @@ int test_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
             if (ret >= 0) {  // found key
                 size_t row_offset;
-                bufferlist::iterator it = row_offset_bl.begin();
+                bufferlist::const_iterator it = row_offset_bl.begin();
                 try {
-                    ::decode(row_offset, it);
+                    using ceph::decode;
+                    decode(row_offset, it);
                 } catch (const buffer::error &err) {
                     CLS_ERR("ERR cant decode index entry");
                     return -EIO;
@@ -1888,8 +1907,9 @@ int test_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         "none");
 
     // add both our cls info struct and our result bl to the output buffer.
-    ::encode(info, *out);
-    ::encode(result_bl, *out);
+    using ceph::encode;
+    encode(info, *out);
+    encode(result_bl, *out);
 
     return 0;
 }
@@ -1900,8 +1920,9 @@ int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     // unpack the requested op from the inbl.
     stats_op op;
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:exec_stats_op: decoding stats_op");
         return -EINVAL;
@@ -1936,8 +1957,9 @@ int transform_db_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
     // unpack the requested op from the inbl.
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:transform_db_op: decoding transform_op");
         return -EINVAL;
@@ -1961,12 +1983,13 @@ int transform_db_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     }
 
     using namespace Tables;
-    ceph::bufferlist::iterator it = encoded_meta_bls.begin();
+    ceph::bufferlist::const_iterator it = encoded_meta_bls.begin();
     while (it.get_remaining() > 0) {
         bufferlist bl;
         bufferlist transformed_encoded_meta_bl;
         try {
-            ::decode(bl, it);  // unpack the next bl
+            using ceph::decode;
+            decode(bl, it);  // unpack the next bl
         } catch (const buffer::error &err) {
             CLS_ERR("ERROR: decoding object format from BL");
             return -EINVAL;
@@ -2024,10 +2047,12 @@ int transform_db_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
         // Add meta_builder's data into a bufferlist as char*
         bufferlist meta_bl;
-        meta_bl.append(reinterpret_cast<const char*>(                   \
-                               meta_builder->GetBufferPointer()),
-                       meta_builder->GetSize());
-        ::encode(meta_bl, transformed_encoded_meta_bl);
+        meta_bl.append(reinterpret_cast<const char*>(
+                       meta_builder->GetBufferPointer()),
+                       meta_builder->GetSize()
+        );
+        using ceph::encode;
+        encode(meta_bl, transformed_encoded_meta_bl);
         delete meta_builder;
 
         // Write the object back to Ceph. cls_cxx_replace truncates the original
@@ -2050,8 +2075,9 @@ int example_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     // unpack the requested op from the inbl.
     inbl_sample_op op;
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:example_query_op: decoding inbl_sample_op");
         return -EINVAL;
@@ -2098,12 +2124,14 @@ int example_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     info.rows_processed = rows_processed;
     info.read_time_ns = read_timer;
     info.eval_time_ns = func_timer;
-    ::encode(info, *out);
+    using ceph::encode;
+    encode(info, *out);
 
     // encode result data for client.
     bufferlist result_bl;
     result_bl.append("result data goes into result bl.");
-    ::encode(result_bl, *out);
+    using ceph::encode;
+    encode(result_bl, *out);
 
     return 0;
 }
@@ -2114,8 +2142,9 @@ int wasm_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     // unpack the requested op from the inbl.
     inbl_sample_op op;
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:example_query_op: decoding inbl_sample_op");
         return -EINVAL;
@@ -2162,12 +2191,14 @@ int wasm_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     info.rows_processed = rows_processed;
     info.read_time_ns = read_timer;
     info.eval_time_ns = func_timer;
-    ::encode(info, *out);
+    using ceph::encode;
+    encode(info, *out);
 
     // encode result data for client.
     bufferlist result_bl;
     result_bl.append("result data goes into result bl.");
-    ::encode(result_bl, *out);
+    using ceph::encode;
+    encode(result_bl, *out);
 
     return 0;
 }
@@ -2182,8 +2213,9 @@ static int lock_obj_init_op(cls_method_context_t hctx, bufferlist *in, bufferlis
     lockobj_info op_in;
 
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op_in, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op_in, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular: lock_obj_init_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2206,9 +2238,10 @@ static int lock_obj_init_op(cls_method_context_t hctx, bufferlist *in, bufferlis
          return ret;
 
      bufferlist result_bl;
-     ::encode(ret, *out);
+     using ceph::encode;
+     encode(ret, *out);
      result_bl.append("Created Special Ceph Object");
-     ::encode(result_bl, *out);
+     encode(result_bl, *out);
      return 0;
 }
 
@@ -2220,8 +2253,9 @@ static int lock_obj_create_op(cls_method_context_t hctx, bufferlist *in, bufferl
     lockobj_info op;
 
     try {
-      bufferlist::iterator it = in->begin();
-      ::decode(op, it);
+      bufferlist::const_iterator it = in->begin();
+      using ceph::decode;
+      decode(op, it);
     } catch (const buffer::error &err) {
       CLS_ERR("ERROR: cls_tabular: lock_obj_create_op: decoding inbl_lockobj_op");
       return -EINVAL;
@@ -2240,8 +2274,9 @@ int lock_obj_free_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     lockobj_info op_in;
 
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op_in, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op_in, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular: lock_obj_get_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2256,8 +2291,9 @@ int lock_obj_free_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
       return ret;
     lockobj_info op_out;
     try {
-        bufferlist::iterator it = bl_entry2.begin();
-        ::decode(op_out, it);
+        bufferlist::const_iterator it = bl_entry2.begin();
+        using ceph::decode;
+        decode(op_out, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:init_lock_obj_query_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2269,7 +2305,8 @@ int lock_obj_free_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     /* NOTE: If already free skip setting it here */
     if (op_out.table_busy) {
         op_out.table_busy = false;
-        ::encode(op_out, *out);
+        using ceph::encode;
+        encode(op_out, *out);
         // TODO: encode new op and set
         table_obj_map[op_out.table_name] = *out;
         ret = cls_cxx_map_set_vals(hctx, &table_obj_map);
@@ -2285,8 +2322,9 @@ int lock_obj_get_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     lockobj_info op_in;
 
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op_in, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op_in, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular: lock_obj_get_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2310,8 +2348,9 @@ int lock_obj_get_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
       return ret;
     lockobj_info op_out;
     try {
-        bufferlist::iterator it = bl_entry.begin();
-        ::decode(op_out, it);
+        bufferlist::const_iterator it = bl_entry.begin();
+        using ceph::decode;
+        decode(op_out, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR: cls_tabular:init_lock_obj_query_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2322,7 +2361,8 @@ int lock_obj_get_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     CLS_LOG(20, "lock_obj_get_op: op_out.nobjs = %d", op_out.num_objs);
     bufferlist result_bl;
     result_bl.append("result data goes into result bl.");
-    ::encode(op_out, *out);
+    using ceph::encode;
+    encode(op_out, *out);
     return 0;
 }
 
@@ -2332,8 +2372,9 @@ int lock_obj_acquire_op(cls_method_context_t hctx, bufferlist *in, bufferlist *o
     lockobj_info op_in;
 
     try {
-        bufferlist::iterator it = in->begin();
-        ::decode(op_in, it);
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op_in, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR 1: cls_tabular:init_lock_obj_query_op: decoding inbl_lockobj_op");
         return -EINVAL;
@@ -2357,8 +2398,9 @@ int lock_obj_acquire_op(cls_method_context_t hctx, bufferlist *in, bufferlist *o
 
     lockobj_info op_out;
     try {
-        bufferlist::iterator it = bl_entry.begin();
-        ::decode(op_out, it);
+        bufferlist::const_iterator it = bl_entry.begin();
+        using ceph::decode;
+        decode(op_out, it);
     } catch (const buffer::error &err) {
         CLS_ERR("ERROR 2: cls_tabular:init_lock_obj_query_op: decoding init_lockobj_op");
         return -EINVAL;
@@ -2372,7 +2414,8 @@ int lock_obj_acquire_op(cls_method_context_t hctx, bufferlist *in, bufferlist *o
     if(!op_out.table_busy) {
         op_out.table_busy=!op_out.table_busy;
 	bufferlist bflst;
-	::encode(op_out, bflst);
+    using ceph::encode;
+	encode(op_out, bflst);
         std::map<std::string, bufferlist> table_obj_map;
         table_obj_map[op_out.table_name]=bflst;
         ret = cls_cxx_map_set_vals(hctx, &table_obj_map);
@@ -2382,7 +2425,8 @@ int lock_obj_acquire_op(cls_method_context_t hctx, bufferlist *in, bufferlist *o
 	op_out.table_busy=false;
     }
     CLS_LOG(20, "Done setting up the values");
-    ::encode(op_out, *out);
+    using ceph::encode;
+    encode(op_out, *out);
     return 0;
 }
 void __cls_init()

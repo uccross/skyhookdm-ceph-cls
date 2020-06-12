@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-source /opt/rh/devtoolset-8/enable
+echo "source /opt/rh/devtoolset-8/enable" >> /etc/profile
+source /etc/profile
 
 if [ -d "ceph/" ]; then
   echo "Using ceph/ as folder as source folder"
@@ -29,6 +30,8 @@ if [ -z "$BUILD_THREADS" ] ; then
   BUILD_THREADS=`grep processor /proc/cpuinfo | wc -l`
 fi
 
+
 make -j$BUILD_THREADS cls_tabular
 make -j$BUILD_THREADS run-query
 make -j$BUILD_THREADS ceph_test_skyhook_query
+make -j$BUILD_THREADS sky_tabular_flatflex_writer

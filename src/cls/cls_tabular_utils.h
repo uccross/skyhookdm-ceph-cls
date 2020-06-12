@@ -680,6 +680,7 @@ struct rec_table {
         data(_data) {
             // ensure one nullbit per col
             int num_nullbits = nullbits.size() * sizeof(nullbits[0]) * 8;
+            (void) num_nullbits;
             assert (num_nullbits == MAX_TABLE_COLS);
         };
 };

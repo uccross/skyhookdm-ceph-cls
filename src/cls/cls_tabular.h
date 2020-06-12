@@ -1,3 +1,4 @@
+
 /*
 * Copyright (C) 2018 The Regents of the University of California
 * All Rights Reserved
@@ -16,7 +17,6 @@
 
 
 void cls_log_message(std::string msg, bool is_err, int log_level);
-
 
 // used by Arrow format only
 #define STREAM_CAPACITY 1024
@@ -108,6 +108,21 @@ enum CompressionType {
     // etc.
 };
 
+struct testencode {
+
+    string s;
+
+    void encode(bufferlist &bl) const {
+    using ceph::encode;
+    encode(s, bl);
+  }
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(s, bl);
+  }
+};
+WRITE_CLASS_ENCODER(testencode)
+
 /*
  * Stores the query request parameters.  This is encoded by the client and
  * decoded by server (osd node) for query processing.
@@ -139,52 +154,50 @@ struct query_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(debug, bl);
-    ::encode(query, bl);
-    ::encode(fastpath, bl);
-    ::encode(index_read, bl);
-    ::encode(mem_constrain, bl);
-    ::encode(index_type, bl);
-    ::encode(index2_type, bl);
-    ::encode(index_plan_type, bl);
-    ::encode(index_batch_size, bl);
-    ::encode(result_format, bl);
-    ::encode(db_schema_name, bl);
-    ::encode(table_name, bl);
-    ::encode(data_schema, bl);
-    ::encode(query_schema, bl);
-    ::encode(index_schema, bl);
-    ::encode(index2_schema, bl);
-    ::encode(query_preds, bl);
-    ::encode(index_preds, bl);
-    ::encode(index2_preds, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(debug, bl);
+    encode(query, bl);
+    encode(fastpath, bl);
+    encode(index_read, bl);
+    encode(mem_constrain, bl);
+    encode(index_type, bl);
+    encode(index2_type, bl);
+    encode(index_plan_type, bl);
+    encode(index_batch_size, bl);
+    encode(result_format, bl);
+    encode(db_schema_name, bl);
+    encode(table_name, bl);
+    encode(data_schema, bl);
+    encode(query_schema, bl);
+    encode(index_schema, bl);
+    encode(index2_schema, bl);
+    encode(query_preds, bl);
+    encode(index_preds, bl);
+    encode(index2_preds, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(debug, bl);
-    ::decode(query, bl);
-    ::decode(fastpath, bl);
-    ::decode(index_read, bl);
-    ::decode(mem_constrain, bl);
-    ::decode(index_type, bl);
-    ::decode(index2_type, bl);
-    ::decode(index_plan_type, bl);
-    ::decode(index_batch_size, bl);
-    ::decode(result_format, bl);
-    ::decode(db_schema_name, bl);
-    ::decode(table_name, bl);
-    ::decode(data_schema, bl);
-    ::decode(query_schema, bl);
-    ::decode(index_schema, bl);
-    ::decode(index2_schema, bl);
-    ::decode(query_preds, bl);
-    ::decode(index_preds, bl);
-    ::decode(index2_preds, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(debug, bl);
+    decode(query, bl);
+    decode(fastpath, bl);
+    decode(index_read, bl);
+    decode(mem_constrain, bl);
+    decode(index_type, bl);
+    decode(index2_type, bl);
+    decode(index_plan_type, bl);
+    decode(index_batch_size, bl);
+    decode(result_format, bl);
+    decode(db_schema_name, bl);
+    decode(table_name, bl);
+    decode(data_schema, bl);
+    decode(query_schema, bl);
+    decode(index_schema, bl);
+    decode(index2_schema, bl);
+    decode(query_preds, bl);
+    decode(index_preds, bl);
+    decode(index2_preds, bl);
   }
 
   std::string toString() {
@@ -234,42 +247,40 @@ struct test_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(query, bl);
-    ::encode(extended_price, bl);
-    ::encode(order_key, bl);
-    ::encode(line_number, bl);
-    ::encode(ship_date_low, bl);
-    ::encode(ship_date_high, bl);
-    ::encode(discount_low, bl);
-    ::encode(discount_high, bl);
-    ::encode(quantity, bl);
-    ::encode(comment_regex, bl);
-    ::encode(use_index, bl);
-    ::encode(old_projection, bl);
-    ::encode(extra_row_cost, bl);
-    ::encode(fastpath, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(query, bl);
+    encode(extended_price, bl);
+    encode(order_key, bl);
+    encode(line_number, bl);
+    encode(ship_date_low, bl);
+    encode(ship_date_high, bl);
+    encode(discount_low, bl);
+    encode(discount_high, bl);
+    encode(quantity, bl);
+    encode(comment_regex, bl);
+    encode(use_index, bl);
+    encode(old_projection, bl);
+    encode(extra_row_cost, bl);
+    encode(fastpath, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(query, bl);
-    ::decode(extended_price, bl);
-    ::decode(order_key, bl);
-    ::decode(line_number, bl);
-    ::decode(ship_date_low, bl);
-    ::decode(ship_date_high, bl);
-    ::decode(discount_low, bl);
-    ::decode(discount_high, bl);
-    ::decode(quantity, bl);
-    ::decode(comment_regex, bl);
-    ::decode(use_index, bl);
-    ::decode(old_projection, bl);
-    ::decode(extra_row_cost, bl);
-    ::decode(fastpath, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(query, bl);
+    decode(extended_price, bl);
+    decode(order_key, bl);
+    decode(line_number, bl);
+    decode(ship_date_low, bl);
+    decode(ship_date_high, bl);
+    decode(discount_low, bl);
+    decode(discount_high, bl);
+    decode(quantity, bl);
+    decode(comment_regex, bl);
+    decode(use_index, bl);
+    decode(old_projection, bl);
+    decode(extra_row_cost, bl);
+    decode(fastpath, bl);
   }
 
   std::string toString() {
@@ -307,20 +318,18 @@ struct stats_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(db_schema, bl);
-    ::encode(table_name, bl);
-    ::encode(data_schema, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(db_schema, bl);
+    encode(table_name, bl);
+    encode(data_schema, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(db_schema, bl);
-    ::decode(table_name, bl);
-    ::decode(data_schema, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(db_schema, bl);
+    decode(table_name, bl);
+    decode(data_schema, bl);
   }
 
   std::string toString() {
@@ -346,20 +355,18 @@ struct transform_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(table_name, bl);
-    ::encode(query_schema, bl);
-    ::encode(required_type, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(table_name, bl);
+    encode(query_schema, bl);
+    encode(required_type, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(table_name, bl);
-    ::decode(query_schema, bl);
-    ::decode(required_type, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(table_name, bl);
+    decode(query_schema, bl);
+    decode(required_type, bl);
   }
 
   std::string toString() {
@@ -372,118 +379,6 @@ struct transform_op {
   }
 };
 WRITE_CLASS_ENCODER(transform_op)
-
-
-struct hep_file_metadata {
-
-  // parent information for this file
-  std::string dataset_name;
-
-  // store logical and physical metadata as KV pairs in json strings.
-  // https://root.cern.ch/doc/master/classTFile.html
-  // physical offsets into the file.
-  std::string tfile_header;  // json - physical file info
-
-  // https://root.cern.ch/doc/master/classTTree.html
-  // logical info how many trees in file and branches in each tree
-  std::string file_schema;  // json - logical file info
-
-  hep_file_metadata() {}
-  hep_file_metadata(
-    std::string _dataset_name,
-    std::string _tfile_header,
-    std::string _file_schema) :
-        dataset_name(_dataset_name),
-        tfile_header(_tfile_header),
-        file_schema(_file_schema) { }
-
-  // serialize the fields into bufferlist to be sent over the wire
-  void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(dataset_name, bl);
-    ::encode(tfile_header, bl);
-    ::encode(file_schema, bl);
-    ENCODE_FINISH(bl);
-  }
-
-  // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(dataset_name, bl);
-    ::decode(tfile_header, bl);
-    ::decode(file_schema, bl);
-    DECODE_FINISH(bl);
-  }
-
-  std::string toString() {
-    std::string s;
-    s.append("hep_file_metadata:");
-    s.append(" .dataset_name=" + dataset_name);
-    s.append(" .tfile_header=" + tfile_header);
-    s.append(" .file_schema=" + file_schema);
-    return s;
-  }
-};
-WRITE_CLASS_ENCODER(hep_file_metadata);
-
-
-// query op instructions for High Energy Physics (HEP) domain.
-struct hep_query_op {
-
-  std::string file_type; // e.g., root, nano_aod, etc.
-  std::string query_schema;
-  bool is_compressed;
-  bool is_orig_read;  // i.e., off,len of original file data
-  int orig_off;
-  int orig_len;
-
-  hep_query_op() {}
-  hep_query_op(
-    std::string _query_schema,
-    bool _is_compressed,
-    bool _is_orig_read,
-    int _orig_off,
-    int _orig_len) :
-        query_schema(_query_schema),
-        is_compressed(_is_compressed),
-        is_orig_read(_is_orig_read),
-        orig_off(_orig_off),
-        orig_len(_orig_len)  { }
-
-  // serialize the fields into bufferlist to be sent over the wire
-  void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(query_schema, bl);
-    ::encode(is_compressed, bl);
-    ::encode(is_orig_read, bl);
-    ::encode(orig_off, bl);
-    ::encode(orig_len, bl);
-    ENCODE_FINISH(bl);
-  }
-
-  // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(query_schema, bl);
-    ::decode(is_compressed, bl);
-    ::decode(is_orig_read, bl);
-    ::decode(orig_off, bl);
-    ::decode(orig_len, bl);
-    DECODE_FINISH(bl);
-  }
-
-  std::string toString() {
-    std::string s;
-    s.append("hep_query_op:");
-    s.append(" .query_schema=" + query_schema);
-    s.append(" .is_compressed=" + std::to_string(is_compressed));
-    s.append(" .is_orig_read=" + std::to_string(is_orig_read));
-    s.append(" .orig_off=" + std::to_string(orig_off));
-    s.append(" .orig_len=" + std::to_string(orig_len));
-    return s;
-  }
-};
-WRITE_CLASS_ENCODER(hep_query_op);
 
 // holds an omap entry containing flatbuffer location
 // this entry type contains physical location info
@@ -498,17 +393,14 @@ struct idx_fb_entry {
     idx_fb_entry(uint32_t o, uint32_t l) : off(o), len(l) { }
 
     void encode(bufferlist& bl) const {
-        ENCODE_START(1, 1, bl);
-        ::encode(off, bl);
-        ::encode(len, bl);
-        ENCODE_FINISH(bl);
+        using ceph::encode;
+        encode(off, bl);
     }
 
-    void decode(bufferlist::iterator& bl) {
-        DECODE_START(1, bl);
-        ::decode(off, bl);
-        ::decode(len, bl);
-        DECODE_FINISH(bl);
+    void decode(bufferlist::const_iterator &bl) {
+        using ceph::decode;
+        decode(off, bl);
+        decode(len, bl);
     }
 
     std::string toString() {
@@ -536,19 +428,17 @@ struct idx_rec_entry {
             rid(rec_id){}
 
     void encode(bufferlist& bl) const {
-        ENCODE_START(1, 1, bl);
-        ::encode(fb_num, bl);
-        ::encode(row_num, bl);
-        ::encode(rid, bl);
-        ENCODE_FINISH(bl);
+        using ceph::encode;
+        encode(fb_num, bl);
+        encode(row_num, bl);
+        encode(rid, bl);
     }
 
-    void decode(bufferlist::iterator& bl) {
-        DECODE_START(1, bl);
-        ::decode(fb_num, bl);
-        ::decode(row_num, bl);
-        ::decode(rid, bl);
-        DECODE_FINISH(bl);
+    void decode(bufferlist::const_iterator &bl) {
+        using ceph::decode;
+        decode(fb_num, bl);
+        decode(row_num, bl);
+        decode(rid, bl);
     }
 
     std::string toString() {
@@ -579,21 +469,19 @@ struct idx_txt_entry {
             wpos(wp) {}
 
     void encode(bufferlist& bl) const {
-        ENCODE_START(1, 1, bl);
-        ::encode(fb_num, bl);
-        ::encode(row_num, bl);
-        ::encode(rid, bl);
-        ::encode(wpos, bl);
-        ENCODE_FINISH(bl);
+        using ceph::encode;
+        encode(fb_num, bl);
+        encode(row_num, bl);
+        encode(rid, bl);
+        encode(wpos, bl);
     }
 
-    void decode(bufferlist::iterator& bl) {
-        DECODE_START(1, bl);
-        ::decode(fb_num, bl);
-        ::decode(row_num, bl);
-        ::decode(rid, bl);
-        ::decode(wpos, bl);
-        DECODE_FINISH(bl);
+    void decode(bufferlist::const_iterator &bl) {
+        using ceph::decode;
+        decode(fb_num, bl);
+        decode(row_num, bl);
+        decode(rid, bl);
+        decode(wpos, bl);
     }
 
     std::string toString() {
@@ -627,26 +515,24 @@ struct idx_op {
         idx_text_delims(delimiters) {}
 
     void encode(bufferlist& bl) const {
-        ENCODE_START(1, 1, bl);
-        ::encode(idx_unique, bl);
-        ::encode(idx_ignore_stopwords, bl);
-        ::encode(idx_batch_size, bl);
-        ::encode(idx_type, bl);
-        ::encode(idx_schema_str, bl);
-        ::encode(idx_text_delims, bl);
-        ENCODE_FINISH(bl);
+        using ceph::encode;
+        encode(idx_unique, bl);
+        encode(idx_ignore_stopwords, bl);
+        encode(idx_batch_size, bl);
+        encode(idx_type, bl);
+        encode(idx_schema_str, bl);
+        encode(idx_text_delims, bl);
     }
 
-    void decode(bufferlist::iterator& bl) {
+    void decode(bufferlist::const_iterator &bl) {
         std::string s;
-        DECODE_START(1, bl);
-        ::decode(idx_unique, bl);
-        ::decode(idx_ignore_stopwords, bl);
-        ::decode(idx_batch_size, bl);
-        ::decode(idx_type, bl);
-        ::decode(idx_schema_str, bl);
-        ::decode(idx_text_delims, bl);
-        DECODE_FINISH(bl);
+        using ceph::decode;
+        decode(idx_unique, bl);
+        decode(idx_ignore_stopwords, bl);
+        decode(idx_batch_size, bl);
+        decode(idx_type, bl);
+        decode(idx_schema_str, bl);
+        decode(idx_text_delims, bl);
     }
 
     std::string toString() {
@@ -703,42 +589,40 @@ struct col_stats {
         }
 
     void encode(bufferlist& bl) const {
-        ENCODE_START(1, 1, bl);
-        ::encode(col_id, bl);
-        ::encode(col_type, bl);
-        ::encode(table_id, bl);
-        ::encode(stats_level, bl),
-        ::encode(utc, bl);
-        ::encode(table_name, bl);
-        ::encode(col_info_str, bl);
-        ::encode(min_val, bl);
-        ::encode(max_val, bl);
-        ::encode(nbins, bl);
+        using ceph::encode;
+        encode(col_id, bl);
+        encode(col_type, bl);
+        encode(table_id, bl);
+        encode(stats_level, bl),
+        encode(utc, bl);
+        encode(table_name, bl);
+        encode(col_info_str, bl);
+        encode(min_val, bl);
+        encode(max_val, bl);
+        encode(nbins, bl);
         for (unsigned int i=0; i<nbins; i++) {
-            ::encode(hist[i], bl);
+            encode(hist[i], bl);
         }
-        ENCODE_FINISH(bl);
     }
 
-    void decode(bufferlist::iterator& bl) {
+    void decode(bufferlist::const_iterator &bl) {
         std::string s;
-        DECODE_START(1, bl);
-        ::decode(col_id, bl);
-        ::decode(col_type, bl);
-        ::decode(table_id, bl);
-        ::decode(stats_level, bl);
-        ::decode(utc, bl);
-        ::decode(table_name, bl);
-        ::decode(col_info_str, bl);
-        ::decode(min_val, bl);
-        ::decode(max_val, bl);
-        ::decode(nbins, bl);
+        using ceph::decode;
+        decode(col_id, bl);
+        decode(col_type, bl);
+        decode(table_id, bl);
+        decode(stats_level, bl);
+        decode(utc, bl);
+        decode(table_name, bl);
+        decode(col_info_str, bl);
+        decode(min_val, bl);
+        decode(max_val, bl);
+        decode(nbins, bl);
         for (unsigned int i=0; i<nbins; i++) {
             int tmp;
-            ::decode(tmp, bl);
+            decode(tmp, bl);
             hist.push_back(tmp);
         }
-        DECODE_FINISH(bl);
     }
 
     std::string toString() {
@@ -786,22 +670,20 @@ struct inbl_sample_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(message, bl);
-    ::encode(instructions, bl);
-    ::encode(counter, bl);
-    ::encode(func_id, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(message, bl);
+    encode(instructions, bl);
+    encode(counter, bl);
+    encode(func_id, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(message, bl);
-    ::decode(instructions, bl);
-    ::decode(counter, bl);
-    ::decode(func_id, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(message, bl);
+    decode(instructions, bl);
+    decode(counter, bl);
+    decode(func_id, bl);
   }
 
   std::string toString() {
@@ -839,22 +721,20 @@ struct outbl_sample_info {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(message, bl);
-    ::encode(rows_processed, bl);
-    ::encode(read_time_ns, bl);
-    ::encode(eval_time_ns, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(message, bl);
+    encode(rows_processed, bl);
+    encode(read_time_ns, bl);
+    encode(eval_time_ns, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(message, bl);
-    ::decode(rows_processed, bl);
-    ::decode(read_time_ns, bl);
-    ::decode(eval_time_ns, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(message, bl);
+    decode(rows_processed, bl);
+    decode(read_time_ns, bl);
+    decode(eval_time_ns, bl);
   }
 
   std::string toString() {
@@ -890,22 +770,20 @@ struct wasm_inbl_sample_op {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(message, bl);
-    ::encode(instructions, bl);
-    ::encode(counter, bl);
-    ::encode(func_id, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(message, bl);
+    encode(instructions, bl);
+    encode(counter, bl);
+    encode(func_id, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(message, bl);
-    ::decode(instructions, bl);
-    ::decode(counter, bl);
-    ::decode(func_id, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(message, bl);
+    decode(instructions, bl);
+    decode(counter, bl);
+    decode(func_id, bl);
   }
 
   std::string toString() {
@@ -943,22 +821,20 @@ struct wasm_outbl_sample_info {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(message, bl);
-    ::encode(rows_processed, bl);
-    ::encode(read_time_ns, bl);
-    ::encode(eval_time_ns, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(message, bl);
+    encode(rows_processed, bl);
+    encode(read_time_ns, bl);
+    encode(eval_time_ns, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(message, bl);
-    ::decode(rows_processed, bl);
-    ::decode(read_time_ns, bl);
-    ::decode(eval_time_ns, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(message, bl);
+    decode(rows_processed, bl);
+    decode(read_time_ns, bl);
+    decode(eval_time_ns, bl);
   }
 
   std::string toString() {
@@ -972,77 +848,6 @@ struct wasm_outbl_sample_info {
   }
 };
 WRITE_CLASS_ENCODER(wasm_outbl_sample_info)
-
-// Custom op struct for HEP data queries.
-struct hep_op {
-
-  bool fastpath;
-  std::string dataset_name;
-  std::string file_name;
-  std::string tree_name;
-  std::string data_schema;
-  std::string query_schema;
-  std::string query_preds;
-
-  hep_op() {}
-  hep_op(
-    bool _fastpath,
-    std::string _dataset_name,
-    std::string _file_name,
-    std::string _tree_name,
-    std::string _data_schema,
-    std::string _query_schema,
-    std::string _query_preds)
-    :
-    fastpath(_fastpath),
-    dataset_name(_dataset_name),
-    file_name(_file_name),
-    tree_name(_tree_name),
-    data_schema(_data_schema),
-    query_schema(_query_schema),
-    query_preds(_query_preds) { }
-
-  // serialize the fields into bufferlist to be sent over the wire
-  void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(fastpath, bl);
-    ::encode(dataset_name, bl);
-    ::encode(file_name, bl);
-    ::encode(tree_name, bl);
-    ::encode(data_schema, bl);
-    ::encode(query_schema, bl);
-    ::encode(query_preds, bl);
-    ENCODE_FINISH(bl);
-  }
-
-  // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(fastpath, bl);
-    ::decode(dataset_name, bl);
-    ::decode(file_name, bl);
-    ::decode(tree_name, bl);
-    ::decode(data_schema, bl);
-    ::decode(query_schema, bl);
-    ::decode(query_preds, bl);
-    DECODE_FINISH(bl);
-  }
-
-  std::string toString() {
-    std::string s;
-    s.append("hep_op:");
-    s.append(" .fastpath=" + std::to_string(fastpath));
-    s.append(" .dataset_name=" + dataset_name);
-    s.append(" .file_name=" + file_name);
-    s.append(" .tree_name=" + tree_name);
-    s.append(" .data_schema=" + data_schema);
-    s.append(" .query_schema=" + query_schema);
-    s.append(" .query_preds=" + query_preds);
-    return s;
-  }
-};
-WRITE_CLASS_ENCODER(hep_op)
-
 
 // Locking object information, used for cross-object atomic
 // exclusive lock mechanism.
@@ -1066,22 +871,20 @@ struct lockobj_info {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(table_busy, bl);
-    ::encode(num_objs, bl);
-    ::encode(table_name, bl);
-    ::encode(table_group, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(table_busy, bl);
+    encode(num_objs, bl);
+    encode(table_name, bl);
+    encode(table_group, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(table_busy, bl);
-    ::decode(num_objs, bl);
-    ::decode(table_name, bl);
-    ::decode(table_group, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(table_busy, bl);
+    decode(num_objs, bl);
+    decode(table_name, bl);
+    decode(table_group, bl);
   }
 
   std::string toString() {
@@ -1118,22 +921,20 @@ struct cls_info {
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
-    ENCODE_START(1, 1, bl);
-    ::encode(read_ns, bl);
-    ::encode(eval_ns, bl);
-    ::encode(push_back_predicates, bl);
-    ::encode(push_back_reason, bl);
-    ENCODE_FINISH(bl);
+    using ceph::encode;
+    encode(read_ns, bl);
+    encode(eval_ns, bl);
+    encode(push_back_predicates, bl);
+    encode(push_back_reason, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
-  void decode(bufferlist::iterator& bl) {
-    DECODE_START(1, bl);
-    ::decode(read_ns, bl);
-    ::decode(eval_ns, bl);
-    ::decode(push_back_predicates, bl);
-    ::decode(push_back_reason, bl);
-    DECODE_FINISH(bl);
+  void decode(bufferlist::const_iterator &bl) {
+    using ceph::decode;
+    decode(read_ns, bl);
+    decode(eval_ns, bl);
+    decode(push_back_predicates, bl);
+    decode(push_back_reason, bl);
   }
 
   std::string toString() {

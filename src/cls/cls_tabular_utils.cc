@@ -1101,8 +1101,8 @@ sky_meta getSkyMeta(bufferlist *bl, bool is_meta, int data_format) {
             none,           // no compression
             data_format,    // user specified arg for testing formats
             false,          // deleted?
-            bl->length(),    // formatted data size in bytes
-            bl->c_str());    // get data as contiguous bytes before accessing
+            bl->length(),   // formatted data size in bytes
+            bl->c_str());   // get data as contiguous bytes before accessing
     }
 }
 
@@ -1179,6 +1179,7 @@ sky_root getSkyRoot(const char *ds, size_t ds_size, int ds_format) {
         case SFT_CSV:
         default:
             assert (SkyFormatTypeNotRecognized==0);
+            std::terminate();
     }
 
     // this is our skyhook_root struct now, which is agnostic to the
@@ -2425,7 +2426,7 @@ int extract_arrow_from_buffer(std::shared_ptr<arrow::Table>* table, const std::s
     arrow::Result<std::shared_ptr<arrow::ipc::RecordBatchReader>> result = arrow::ipc::RecordBatchStreamReader::Open(buf_reader);
     if (result.ok()) {
         reader = std::move(result).ValueOrDie();
-    } 
+    }
 
     auto schema = reader->schema();
     auto metadata = schema->metadata();
