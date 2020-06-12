@@ -28,15 +28,6 @@ popper run build
 > **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
 > which contains the definition of what the `build` command does.
 
-## run tests
-
-```bash
-popper run test
-```
-
-> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
-> which contains the definition of what the `test` command does.
-
 ## generate a rook-compatible docker image
 
 ```bash
@@ -46,6 +37,15 @@ popper run build-rook-img
 > **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
 > which contains the definition of what the `build-rook-img` command 
 > does.
+
+## run tests
+
+```bash
+popper run test
+```
+
+> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
+> which contains the definition of what the `test` command does.
 
 ## interactive shell
 
