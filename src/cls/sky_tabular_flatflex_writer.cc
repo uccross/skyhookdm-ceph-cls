@@ -764,7 +764,7 @@ writeToDisk(
     // unpacked via decode from a bl iterator into a bl, used by
     // query.cc and cls_tabular.cc
     bufferlist fbmeta_wrapper_bl;
-    ::encode(fbmeta_bl, fbmeta_wrapper_bl);
+    ceph::encode(fbmeta_bl, fbmeta_wrapper_bl);
 
     string fname = "skyhook." + data_format
                                         + "." + bucket->table_name

@@ -1,8 +1,12 @@
 #include <iostream>
+#include <errno.h>
+
 #include "query.h"
+#include "include/rados/librados.hpp"
+#include "include/encoding.h"
+#include "test/librados/test_cxx.h"
 #include "test/librados/test.h"
 #include "gtest/gtest.h"
-
 using namespace librados;
 
 // globals, taken from run-query
@@ -129,7 +133,8 @@ class SkyhookQuery : public ::testing::Test {
           op.extra_row_cost = extra_row_cost;
 
           bufferlist inbl;
-          ::encode(op, inbl);
+          using ceph::encode;
+          encode(op, inbl);
           int ret = ioctx.aio_exec(oid, s->c,
             "tabular", "test_query_op", inbl, &s->bl);
           ASSERT_GE(ret, 0);

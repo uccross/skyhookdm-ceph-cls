@@ -887,7 +887,8 @@ int main(int argc, char **argv)
         op.index_preds = qop_index_preds;
         op.index2_preds = qop_index2_preds;
         ceph::bufferlist inbl;
-        ::encode(op, inbl);
+        using ceph::encode;
+        encode(op, inbl);
 
         if (debug)
             cout << "DEBUG: run-query: launching aio_exec for oid=" << oid << endl;
@@ -936,7 +937,8 @@ int main(int argc, char **argv)
             op.fastpath = fastpath;
 
             ceph::bufferlist inbl;
-            ::encode(op, inbl);
+            using ceph::encode;
+            encode(op, inbl);
             int ret = ioctx.aio_exec(oid, s->c,
                 "tabular", "test_query_op", inbl, &s->bl);
             checkret(ret, 0);
@@ -960,7 +962,8 @@ int main(int argc, char **argv)
             op.counter = example_counter;
             op.func_id = example_function_id;
             ceph::bufferlist inbl;
-            ::encode(op, inbl);
+            using ceph::encode;
+            encode(op, inbl);
 
             // execute our example method on the object, passing in our op.
             int ret = ioctx.aio_exec(oid, s->c, "tabular",
@@ -987,7 +990,8 @@ int main(int argc, char **argv)
             op.counter = example_counter;
             op.func_id = example_function_id;
             ceph::bufferlist inbl;
-            ::encode(op, inbl);
+            using ceph::encode;
+            encode(op, inbl);
 
             // execute our example method on the object, passing in our op.
             int ret = ioctx.aio_exec(oid, s->c, "tabular",

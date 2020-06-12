@@ -287,33 +287,15 @@ static void print_data(bufferlist out) {
     lockobj_info info;
 
     try {
-        bufferlist::iterator it = out.begin();
-        ::decode(info, it);
+        bufferlist::const_iterator it = out.begin();
+        using ceph::decode;
+        decode(info, it);
     } catch (const buffer::error &err) {
 	    std::cout <<"ERROR: print_data: decoding lockobj_info failed";
         return;
     }
     std::cout << "Busy:" << info.table_busy << std::endl;
     print_lock.unlock();
-}
-
-static void worker_test_par(librados::IoCtx *ioctx, int i, uint64_t iters,
-    bool test_par_read)
-{
-  std::stringstream ss;
-  ss << "obj." << i;
-  const std::string oid = ss.str();
-
-  int ret = ioctx->create(oid, false);
-  checkret(ret, 0);
-
-  while (true) {
-    ceph::bufferlist inbl, outbl;
-    ::encode(iters, inbl);
-    ::encode(test_par_read, inbl);
-    ret = ioctx->exec(oid, "tabular", "test_par", inbl, outbl);
-    checkret(ret, 0);
-  }
 }
 
 void worker_build_index(librados::IoCtx *ioctx)
@@ -330,7 +312,7 @@ void worker_build_index(librados::IoCtx *ioctx)
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
-    ::encode(index_batch_size, inbl);
+    ceph::encode(index_batch_size, inbl);
     int ret = ioctx->exec(oid, "tabular", "build_index", inbl, outbl);
     checkret(ret, 0);
   }
@@ -352,7 +334,8 @@ void worker_exec_build_sky_index_op(librados::IoCtx *ioctx, idx_op op)
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
 
     if (debug)
         cout << "DEBUG: query.cc: worker_exec_build_sky_index_op: launching exec for oid=" << oid << endl;
@@ -377,7 +360,8 @@ void worker_transform_db_op(librados::IoCtx *ioctx, transform_op op)
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
 
     if (debug)
         cout << "DEBUG: query.cc: worker_transform_db_op: launching exec for oid=" << oid << endl;
@@ -405,7 +389,8 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "exec_runstats_op", inbl, outbl);
     checkret(ret, 0);
   }
@@ -417,7 +402,8 @@ void worker_lock_obj_init_op(librados::IoCtx *ioctx, lockobj_info op)
     std::string oid = op.table_group;
 
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "lock_obj_init_op",
                           inbl, outbl);
     checkret(ret, 0);
@@ -431,7 +417,8 @@ void worker_lock_obj_create_op(librados::IoCtx *ioctx, lockobj_info op)
     std::string oid = op.table_group;
 
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "lock_obj_create_op",
                           inbl, outbl);
     checkret(ret, 0);
@@ -444,7 +431,8 @@ void worker_lock_obj_free_op(librados::IoCtx *ioctx, lockobj_info op)
 
     std::string oid = op.table_group;
     ceph::bufferlist inbl, outbl;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "lock_obj_free_op",
                           inbl, outbl);
     checkret(ret, 0);
@@ -460,7 +448,8 @@ void worker_lock_obj_get_op(librados::IoCtx *ioctx, lockobj_info op)
     // Call get_lock_obj_query_op function
     ceph::bufferlist inbl, outbl;
     std::string oid = op.table_group;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "lock_obj_get_op",
                           inbl, outbl);
 
@@ -476,7 +465,8 @@ void worker_lock_obj_acquire_op(librados::IoCtx *ioctx, lockobj_info op)
     // Call get_lock_obj_query_op function
     ceph::bufferlist inbl, outbl;
     std::string oid = op.table_group;
-    ::encode(op, inbl);
+    using ceph::encode;
+    encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "lock_obj_acquire_op",
                           inbl, outbl);
 
@@ -551,14 +541,15 @@ void worker_exec_query_op()
         // (2) result was from a non-existing object/oid
         // (3) result was from an existing object/oid that contained zero data
         if (raw_result.length() >0) {
-            ceph::bufferlist::iterator it = raw_result.begin();
+            ceph::bufferlist::const_iterator it = raw_result.begin();
             try {
+                using ceph::decode;
                 if (use_cls) {
-                    ::decode(info, it);     // unpack the cls_info struct
-                    ::decode(result, it);  // unpack the result data bufferlist
+                    decode(info, it);     // unpack the cls_info struct
+                    decode(result, it);  // unpack the result data bufferlist
                 }
                 else {                          // standard ceph read, no cls info was added.
-                    ::decode(result, it); // unpack the result data bufferlist
+                    decode(result, it); // unpack the result data bufferlist
                 }
 
             }
@@ -723,14 +714,15 @@ void worker_exec_query_op()
         // (2) result was from a non-existing object/oid
         // (3) result was from an existing object/oid that contained zero data
         if (raw_result.length() >0) {
-            ceph::bufferlist::iterator it = raw_result.begin();
+            ceph::bufferlist::const_iterator it = raw_result.begin();
             try {
+                using ceph::decode;
                 if (use_cls) {
-                    ::decode(info, it);     // unpack the cls_info struct
-                    ::decode(result, it);  // unpack the result data bufferlist
+                    decode(info, it);     // unpack the cls_info struct
+                    decode(result, it);  // unpack the result data bufferlist
                 }
                 else {                          // standard ceph read, no cls info was added.
-                    ::decode(result, it); // unpack the result data bufferlist
+                    decode(result, it); // unpack the result data bufferlist
                 }
             }
             catch (ceph::buffer::error&) {
@@ -762,14 +754,15 @@ void worker_exec_query_op()
         // (2) result was from a non-existing object/oid
         // (3) result was from an existing object/oid that contained zero data
         if (raw_result.length() >0) {
-            ceph::bufferlist::iterator it = raw_result.begin();
+            ceph::bufferlist::const_iterator it = raw_result.begin();
             try {
+                using ceph::decode;
                 if (use_cls) {
-                    ::decode(info, it);     // unpack the cls_info struct
-                    ::decode(result, it);  // unpack the result data bufferlist
+                    decode(info, it);     // unpack the cls_info struct
+                    decode(result, it);  // unpack the result data bufferlist
                 }
                 else {                          // standard ceph read, no cls info was added.
-                    ::decode(result, it); // unpack the result data bufferlist
+                    decode(result, it); // unpack the result data bufferlist
                 }
             }
             catch (ceph::buffer::error&) {
@@ -811,11 +804,13 @@ void worker_exec_query_op()
         // if it was a cls read, first unpack some of the cls processing info
         if (use_cls) {
             try {
-                ceph::bufferlist::iterator it = s->bl.begin();
-                ::decode(info, it);
-                ::decode(result, it);
+                using ceph::decode;
+                ceph::bufferlist::const_iterator it = s->bl.begin();
+                decode(info, it);
+                decode(result, it);
             } catch (ceph::buffer::error&) {
                 int decode_runquery_cls = 0;
+                (void) decode_runquery_cls;
                 assert(decode_runquery_cls);
             }
         } else {
@@ -842,8 +837,9 @@ void worker_exec_query_op()
             // matching rows rather than the actual rows. so we patch up the
             // results to the presentation of the results is correct.
             size_t matching_rows;
-            ceph::bufferlist::iterator it = result.begin();
-            ::decode(matching_rows, it);
+            ceph::bufferlist::const_iterator it = result.begin();
+            using ceph::decode;
+            decode(matching_rows, it);
             result_count += matching_rows;
           } else {
             if (old_projection && use_cls) {

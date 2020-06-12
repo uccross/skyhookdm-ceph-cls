@@ -23,6 +23,7 @@ extern inline uint64_t __getns(clockid_t clock)
 {
   struct timespec ts;
   int ret = clock_gettime(clock, &ts);
+  (void) ret;
   assert(ret == 0);
   return (((uint64_t)ts.tv_sec) * 1000000000ULL) + ts.tv_nsec;
 }
