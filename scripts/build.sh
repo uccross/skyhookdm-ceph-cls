@@ -31,7 +31,8 @@ if [ -z "$BUILD_THREADS" ] ; then
 fi
 
 
-make -j$BUILD_THREADS cls_tabular
-make -j$BUILD_THREADS run-query
-make -j$BUILD_THREADS ceph_test_skyhook_query
-make -j$BUILD_THREADS sky_tabular_flatflex_writer
+make -j$BUILD_THREADS cls_tabular 2>&1 | tee compile.log
+make -j$BUILD_THREADS run-query 2>&1 | tee -a compile.log
+make -j$BUILD_THREADS ceph_test_skyhook_query 2>&1 | tee -a compile.log
+make -j$BUILD_THREADS sky_tabular_flatflex_writer 2>&1 | tee -a compile.log
+echo "See build/compile.log for detailed output."
