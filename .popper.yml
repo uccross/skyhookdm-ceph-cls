@@ -21,10 +21,15 @@ steps:
 - id: build
   uses: docker://uccross/skyhookdm-builder:nautilus
   runs: [bash]
-  env:
-    CMAKE_FLAGS: "-DBOOST_J=4 -DCMAKE_BUILD_TYPE=Release"
-    BUILD_THREADS: "4"
   args: [scripts/build.sh]
+  env:
+    # travis config: 4 threads, release build
+    CMAKE_FLAGS: "-DBOOST_J=4 -DCMAKE_BUILD_TYPE=Release -DWITH_MANPAGE=OFF -DWITH_BABELTRACE=OFF -DWITH_MGR_DASHBOARD_FRONTEND=OFF"
+    BUILD_THREADS: "4"
+
+    ## debug config: 16 threads, debug build
+    # CMAKE_FLAGS: "-DBOOST_J=16 -DCMAKE_BUILD_TYPE=Debug -DWITH_MANPAGE=OFF -DWITH_BABELTRACE=OFF -DWITH_MGR_DASHBOARD_FRONTEND=OFF"
+    # BUILD_THREADS: "16"
 
 - id: build-rook-img
   uses: docker://docker:19.03.10
