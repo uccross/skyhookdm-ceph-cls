@@ -2,55 +2,41 @@
 
 [![Build Status](https://travis-ci.com/uccross/skyhookdm-ceph-cls.svg?branch=master)](https://travis-ci.com/uccross/skyhookdm-ceph-cls)
 
-## dev setup
+## What is SkyhookDM?
 
-Install [Docker][docker-install] and [Popper][popper-install]. Then:
+**TODO**
 
-```bash
-popper run dev-init
-```
+## Try it locally
 
-The above clones ceph and creates symlinks to this project within the 
-ceph tree so that the cls folder is copied to the right place.
+**TODO**
 
-> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
-> which contains the definition of what the `dev-init` command does.
+## On Kubernetes (via [Rook](https://rook.io))
 
-[docker-install]: https://docs.docker.com/get-docker/
-[popper-install]: https://github.com/getpopper/popper/blob/master/docs/sections/getting_started.md#installation
+**TODO**
 
-## build the library
+## Questions
 
-```bash
-popper run build
-```
+For questions, please ask about SkyhookDM on [StackOverflow](https://stackoverflow.com/tags/skyhook-ceph) with the tag `[skyhook-ceph]`
 
-> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
-> which contains the definition of what the `build` command does.
+## Dev setup
 
-## generate a rook-compatible docker image
+These instructions explain the container-native development setup for 
+SkyhookDM. With this approach, there's no need to install build 
+dependencies, and instead we download a Docker image containing the 
+toolchain that builds, tests and packages the library. For information 
+on how to install Docker, take a look at [the official 
+documentation][docker-install].
 
-```bash
-popper run build-rook-img
-```
+In addition, instead of making use of `docker` commands directly, we 
+automate and self-document these tasks using Popper. You can think of 
+Popper as `make` for containers. The Popper tasks defined for this 
+project (`dev-init`, `build`, `test`, and `build-rook-img`) are 
+defined in the [`.popper.yml`](.popper.yml) file. For information on 
+how to install Popper, take a look at [the official 
+documentation][popper-install].
 
-> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
-> which contains the definition of what the `build-rook-img` command 
-> does.
-
-## run tests
-
-```bash
-popper run test
-```
-
-> **NOTE**: Take a look at the [`.popper.yml`](.popper.yml) file, 
-> which contains the definition of what the `test` command does.
-
-## interactive shell
-
-Any of the commands used above can be executed in interactive mode. 
-For example, to open a shell on the `build` step:
+Any of the tasks defined in `.popper.yml` can be executed in 
+interactive mode. For example, to open a shell on the `build` step:
 
 ```bash
 popper sh build
@@ -60,14 +46,33 @@ The above opens an interactive shell inside an instance of the
 [builder image](./ci/Dockerfile), which is a pre-built image with all 
 the dependencies needed to build the CLS.
 
-## try it locally
+[docker-install]: https://docs.docker.com/get-docker/
+[popper-install]: https://github.com/getpopper/popper/blob/master/README.md#installation
 
-**TODO**
+### build
 
-## on kubernetes (via [rook](https://rook.io))
+```bash
+popper run dev-init
+```
 
-**TODO**
+The above clones ceph and creates symlinks to this project within the 
+ceph tree so that the cls folder is copied to the right place.
 
-## Questions 
+### build the library
 
-For questions, please ask about SkyhookDM on [StackOverflow](https://stackoverflow.com/tags/skyhook-ceph) with the tag `[skyhook-ceph]`
+```bash
+popper run build
+```
+
+### run tests
+
+```bash
+popper run test
+```
+
+### generate a rook-compatible docker image
+
+```bash
+popper run build-rook-img
+```
+
