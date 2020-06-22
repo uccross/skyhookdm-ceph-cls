@@ -9,5 +9,6 @@ RUN yum update -y && \
       parquet-devel && \
     yum clean all
 
+COPY ceph/build/bin/run-query /usr/bin/
 COPY ceph/build/bin/ceph_test_skyhook_query /usr/bin/
 COPY ceph/build/lib/libcls_tabular.so* /usr/lib64/rados-classes/
