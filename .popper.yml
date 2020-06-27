@@ -2,20 +2,16 @@ steps:
 
 - id: dev-init
   uses: docker://alpine/git:v2.24.3
-  runs: [sh]
+  runs: [sh, -ec]
   args:
-  - -c
   - |
-    set -e
     git clone \
       --recursive \
       --depth 1 \
       --shallow-submodules \
       --branch nautilus \
       https://github.com/ceph/ceph
-
     ln -s ../../../src ceph/src/cls/tabular
-
     echo "add_subdirectory(tabular)" >> ceph/src/cls/CMakeLists.txt
 
 - id: build
@@ -27,7 +23,7 @@ steps:
     CMAKE_FLAGS: "-DBOOST_J=4 -DCMAKE_BUILD_TYPE=Release -DWITH_MANPAGE=OFF -DWITH_BABELTRACE=OFF -DWITH_MGR_DASHBOARD_FRONTEND=OFF"
     BUILD_THREADS: "4"
 
-    ## debug config: 16 threads, debug build
+    ## debug (local) config: 16 threads, debug build
     # CMAKE_FLAGS: "-DBOOST_J=16 -DCMAKE_BUILD_TYPE=Debug -DWITH_MANPAGE=OFF -DWITH_BABELTRACE=OFF -DWITH_MGR_DASHBOARD_FRONTEND=OFF"
     # BUILD_THREADS: "16"
 
@@ -51,12 +47,11 @@ steps:
 - id: push-img
   uses: docker://docker:19.03.3
   secrets: [DOCKER_USERNAME, DOCKER_PASSWORD]
-  runs: [sh]
+  runs: [sh, -ec]
   args:
-  - -c
   - |
     # only push from master branch
     if [[ $GIT_BRANCH == "master" ]]; then
-      docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+      docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
       docker push uccross/skyhookdm-ceph:v14.2.9
     fi

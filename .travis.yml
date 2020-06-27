@@ -9,4 +9,4 @@ install:
 - export PYTHONUNBUFFERED=1
 - pip install /tmp/popper/src
 
-script: popper run
+script: popper run --allow-undefined-secrets-in-ci
