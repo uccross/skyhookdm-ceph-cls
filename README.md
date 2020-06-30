@@ -4,7 +4,7 @@
 
 ## What is SkyhookDM?
 
-**TODO**
+SkyhookDM extends Ceph distributed object storage with data management functionality for tabular data.  Data is partitioned, and partitions are stored in Ceph objects.  Data management methods are applied directly within the storage system, via the object-level, i.e., 'cls' interface.  Methods include both typical push-downs (offloaded to storage) for query processing such as SELECT, PROJECT, AGGREGATE, and also more general data management techniques such as indexing and physical design, including data layouts and formats.  Data partitions are currently stored as Apache Arrow or Google Flatbuffers format within objects.
 
 ## Try it locally
 
