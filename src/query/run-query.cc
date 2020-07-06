@@ -174,6 +174,7 @@ int main(int argc, char **argv)
     ("lock-obj-acquire", po::bool_switch(&lock_obj_acquire)->default_value(false), "Get table values")
     ("lock-obj-create", po::bool_switch(&lock_obj_create)->default_value(false), "Create Lock obj")
     ("client-format", po::value<std::string>(&client_format_str)->default_value("SFT_ANY"), "Data format type to return to client (def=SFT_ANY)")
+    ("pushdown-cols-only", po::bool_switch(&pushdown_cols_only)->default_value(false), "Only pushdown cols")
  ;
 
   po::options_description all_opts("Allowed options");
@@ -410,6 +411,9 @@ int main(int argc, char **argv)
         for(auto it=sky_tbl_schema.begin(); it!=sky_tbl_schema.end(); ++it) {
             col_info ci(*it);  // deep copy
             sky_qry_schema.push_back(ci);
+	if (pushdown_cols_only) {
+                sky_pushdown_cols_qry_schema.push_back(ci);
+            }
         }
 
         // if project all cols and there are no selection preds, set fastpath
@@ -434,10 +438,47 @@ int main(int argc, char **argv)
                     const struct col_info ci(agg_idx, agg_val_type,
                                              is_key, nullable, agg_name);
                     sky_qry_schema.push_back(ci);
+                    if (pushdown_cols_only) {
+                        sky_pushdown_cols_qry_schema.push_back(ci);
+                    }
                 }
             }
         } else {
             sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
+            if (pushdown_cols_only) {
+                sky_pushdown_cols_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
+            }
+        }
+        if (pushdown_cols_only) {
+            for (auto it = sky_qry_preds.begin(); it != sky_qry_preds.end(); ++it) {
+                PredicateBase* p = *it;
+                int col_idx = p->colIdx();
+                bool pre_col_existed = false;
+                for (auto it_col = sky_pushdown_cols_qry_schema.begin();
+                     it_col != sky_pushdown_cols_qry_schema.end(); ++it_col) {
+                    if ((*it_col).idx == col_idx) {
+                        pre_col_existed = true;
+                    }
+                }
+                if (pre_col_existed) continue;
+
+                int col_type = p->colType();
+                bool is_key;
+                bool nullable;
+                std::string col_name;
+                for (auto it_sch = sky_tbl_schema.begin(); it_sch != sky_tbl_schema.end(); ++it_sch) {
+                    col_info ci = *it_sch;
+                    // if col indexes match then build the value string.
+                    if (col_idx == ci.idx) {
+                        is_key = ci.is_key;
+                        nullable = ci.nullable;
+                        col_name = ci.name;
+                        break;
+                    }
+                }
+                const struct col_info ci(col_idx, col_type, is_key, nullable, col_name);
+                sky_pushdown_cols_qry_schema.push_back(ci);
+            }
         }
     }
 
@@ -604,6 +645,11 @@ int main(int argc, char **argv)
     idx_op_ignore_stopwords = text_index_ignore_stopwords;
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
+
+    if (pushdown_cols_only) {
+        qop_query_schema = schemaToString(sky_pushdown_cols_qry_schema);
+        qop_query_preds = "";
+    }
 
     if (debug) {
         if (query == "flatbuf" || query == "fastpath") {

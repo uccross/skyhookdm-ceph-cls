@@ -87,6 +87,7 @@ std::string qop_tree_name;
 // other exec flags
 bool runstats;
 std::string project_cols;
+bool pushdown_cols_only;
 
 // prints full record header and metadata
 bool print_verbose;
@@ -102,6 +103,8 @@ Tables::schema_vec sky_idx2_schema;
 Tables::predicate_vec sky_qry_preds;
 Tables::predicate_vec sky_idx_preds;
 Tables::predicate_vec sky_idx2_preds;
+
+Tables::schema_vec sky_pushdown_cols_qry_schema;
 
  // these are all intialized in run-query
 std::atomic<unsigned> result_count;
@@ -592,6 +595,9 @@ void worker_exec_query_op()
             if ((project_cols != PROJECT_DEFAULT) || (sky_qry_preds.size() > 0)) {
                 more_processing = true;
             }
+        }
+        if (pushdown_cols_only) {
+            more_processing = true;
         }
 
         // nothing left to do here, so we just print results
