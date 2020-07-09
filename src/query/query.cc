@@ -646,10 +646,42 @@ void worker_exec_query_op()
                     cout << "DEBUG: query.cc: worker:  case SFT_FLATBUF_FLEX_ROW." << endl;
 
                 flatbuffers::FlatBufferBuilder flatbldr(1024); // pre-alloc
-                int ret = processSkyFb(flatbldr,
-                                       sky_tbl_schema,
-                                       sky_qry_schema,
-                                       sky_qry_preds,
+                
+		Tables::schema_vec sky_process_qry_schema;
+		Tables::schema_vec sky_process_tbl_schema;
+		
+                int col_idx = 0;
+                for (auto it_scm = sky_qry_schema.begin(); it_scm != sky_qry_schema.end(); ++it_scm) {
+                    const struct col_info ci(col_idx, (*it_scm).type,
+                                             (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
+                    sky_process_qry_schema.push_back(ci);
+                    col_idx++;
+                }
+                col_idx = 0;
+                for (auto it_scm = sky_pushdown_cols_qry_schema.begin(); it_scm != sky_pushdown_cols_qry_schema.end(); ++it_scm) {
+                    const struct col_info ci(col_idx, (*it_scm).type,
+                                             (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
+                    sky_process_tbl_schema.push_back(ci);
+                    col_idx++;
+                }
+
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: sky_process_tbl_schema= " << endl
+			     << schemaToString(sky_process_tbl_schema) << endl;
+			cout << "DEBUG: query.cc: worker: sky_process_qry_schema= " << endl
+			     << schemaToString(sky_process_qry_schema) << endl;
+		}
+		Tables::predicate_vec sky_process_qry_preds;
+		sky_process_qry_preds = predsFromString(sky_process_tbl_schema, predsToString(sky_qry_preds, sky_tbl_schema));
+		
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: sky_process_qry_preds: "
+			     << predsToString(sky_process_qry_preds, sky_process_tbl_schema) << endl;
+		}
+		int ret = processSkyFb(flatbldr,
+                                       sky_process_tbl_schema,
+                                       sky_process_qry_schema,
+                                       sky_process_qry_preds,
                                        fbmeta.blob_data,
                                        fbmeta.blob_size,
                                        errmsg);
@@ -665,7 +697,11 @@ void worker_exec_query_op()
                     reinterpret_cast<const char*>(flatbldr.GetBufferPointer());
                 sky_root root = getSkyRoot(processed_data, 0);
                 result_count += root.nrows;
-                print_data(processed_data, flatbldr.GetSize(), SFT_FLATBUF_FLEX_ROW);
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: result count: " << result_count << endl;
+			cout << "DEBUG: query.cc: worker: flatbldr size: " << flatbldr.GetSize() << endl;
+		}    
+                print_data(processed_data, 0, SFT_FLATBUF_FLEX_ROW);
                 break;
             }
 
