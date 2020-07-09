@@ -416,11 +416,12 @@ int main(int argc, char **argv)
             col_info ci(*it);  // deep copy
             sky_qry_schema.push_back(ci);
 
-        // if project all cols and there are no selection preds, set fastpath
-        if (sky_qry_preds.size() == 0 and
-            sky_idx_preds.size() == 0 and
-            sky_idx2_preds.size() == 0) {
+            // if project all cols and there are no selection preds, set fastpath
+            if (sky_qry_preds.size() == 0 and
+                sky_idx_preds.size() == 0 and
+                sky_idx2_preds.size() == 0) {
                 fastpath = true;
+            }
         }
     } else {
         if (hasAggPreds(sky_qry_preds)) {
@@ -442,9 +443,6 @@ int main(int argc, char **argv)
             }
         } else {
             sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
-            if (pushdown_cols_only) {
-                sky_pushdown_cols_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
-            }
         }
         // if we only push down columns (project all related columns, let preds be empty)
         if (pushdown_cols_only) {
