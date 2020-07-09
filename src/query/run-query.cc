@@ -406,8 +406,8 @@ int main(int argc, char **argv)
     sky_idx_preds = predsFromString(sky_tbl_schema, index_preds);
     sky_idx2_preds = predsFromString(sky_tbl_schema, index2_preds);
 
-    if (pushdown_cols_only) {
-        assert (use_cls);
+    if (pushdown_cols_only == true) {
+        assert (use_cls == true);
     }
 
     // verify and set the query schema, check for select *
@@ -415,10 +415,6 @@ int main(int argc, char **argv)
         for(auto it=sky_tbl_schema.begin(); it!=sky_tbl_schema.end(); ++it) {
             col_info ci(*it);  // deep copy
             sky_qry_schema.push_back(ci);
-	if (pushdown_cols_only) {
-                sky_pushdown_cols_qry_schema.push_back(ci);
-            }
-        }
 
         // if project all cols and there are no selection preds, set fastpath
         if (sky_qry_preds.size() == 0 and
@@ -442,9 +438,6 @@ int main(int argc, char **argv)
                     const struct col_info ci(agg_idx, agg_val_type,
                                              is_key, nullable, agg_name);
                     sky_qry_schema.push_back(ci);
-                    if (pushdown_cols_only) {
-                        sky_pushdown_cols_qry_schema.push_back(ci);
-                    }
                 }
             }
         } else {
@@ -453,7 +446,14 @@ int main(int argc, char **argv)
                 sky_pushdown_cols_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
             }
         }
+        // if we only push down columns (project all related columns, let preds be empty)
         if (pushdown_cols_only) {
+            // copy the original columns from sky_qry_schema to sky_pushdown_cols_qry_schema
+            for (auto it_ci = sky_qry_schema.begin(); it_ci != sky_qry_schema.end(); ++it_ci) {
+                col_info ci(*it_ci);
+                sky_pushdown_cols_qry_schema.push_back(ci);
+            }
+            // then we add new columns from preds, if not exist
             for (auto it = sky_qry_preds.begin(); it != sky_qry_preds.end(); ++it) {
                 PredicateBase* p = *it;
                 int col_idx = p->colIdx();
@@ -650,6 +650,8 @@ int main(int argc, char **argv)
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
 
+    // if only push down columns, set qop_query_schema to be all related columns
+    // set query preds vec to be empty, we only push down project
     if (pushdown_cols_only) {
         qop_query_schema = schemaToString(sky_pushdown_cols_qry_schema);
         qop_query_preds = "";

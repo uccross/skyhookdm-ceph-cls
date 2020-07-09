@@ -596,7 +596,7 @@ void worker_exec_query_op()
                 more_processing = true;
             }
         }
-        if (pushdown_cols_only) {
+        if (use_cls && pushdown_cols_only) {
             more_processing = true;
         }
 
@@ -665,7 +665,7 @@ void worker_exec_query_op()
                     reinterpret_cast<const char*>(flatbldr.GetBufferPointer());
                 sky_root root = getSkyRoot(processed_data, 0);
                 result_count += root.nrows;
-                print_data(processed_data, 0, SFT_FLATBUF_FLEX_ROW);
+                print_data(processed_data, flatbldr.GetSize(), SFT_FLATBUF_FLEX_ROW);
                 break;
             }
 
