@@ -51,7 +51,7 @@ steps:
   args:
   - |
     # only push from upstream and only for the master branch
-    if [[ $TRAVIS_PULL_REQUEST == false ]] && [[ $GIT_REMOTE_ORIGIN_URL == "https://github.com/uccross/skyhookdm-ceph-cls" ]] && [[ $GIT_BRANCH == "master" ]]
+    if [[ $TRAVIS_PULL_REQUEST == false ]] && [[ $GIT_REMOTE_ORIGIN_URL == "https://github.com/uccross/skyhookdm-ceph-cls" ]] && [[ $GIT_BRANCH == "master" ]]; then
       docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
       docker push uccross/skyhookdm-ceph:v14.2.9
     fi
