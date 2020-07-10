@@ -465,20 +465,20 @@ int main(int argc, char **argv)
                 if (pre_col_existed) continue;
 
                 int col_type = p->colType();
-                bool is_key;
-                bool nullable;
-                std::string col_name;
+                bool cur_is_key = false;
+                bool cur_nullable = false;
+                std::string cur_col_name =  "";
                 for (auto it_sch = sky_tbl_schema.begin(); it_sch != sky_tbl_schema.end(); ++it_sch) {
                     col_info ci = *it_sch;
                     // if col indexes match then build the value string.
                     if (col_idx == ci.idx) {
-                        is_key = ci.is_key;
-                        nullable = ci.nullable;
-                        col_name = ci.name;
+                        cur_is_key = ci.is_key;
+                        cur_nullable = ci.nullable;
+                        cur_col_name = ci.name;
                         break;
                     }
                 }
-                const struct col_info ci(col_idx, col_type, is_key, nullable, col_name);
+                const struct col_info ci(col_idx, col_type, cur_is_key, cur_nullable, cur_col_name);
                 sky_pushdown_cols_qry_schema.push_back(ci);
             }
         }
