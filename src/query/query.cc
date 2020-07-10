@@ -596,7 +596,8 @@ void worker_exec_query_op()
                 more_processing = true;
             }
         }
-        if (use_cls && pushdown_cols_only) {
+	// if pushdown cols only, and there are preds left to process here
+        if (use_cls && pushdown_cols_only && sky_qry_preds.size() > 0) {
             more_processing = true;
         }
 
@@ -647,10 +648,14 @@ void worker_exec_query_op()
 
                 flatbuffers::FlatBufferBuilder flatbldr(1024); // pre-alloc
                 
+		// new qry_schema and tbl_schema for processing
+		// the col_idx in the schema should reindex starting from 0
 		Tables::schema_vec sky_process_qry_schema;
 		Tables::schema_vec sky_process_tbl_schema;
 		
                 int col_idx = 0;
+		// process_qry_schema is just the same as the required qry columns,
+		// we only need to reset col_idx
                 for (auto it_scm = sky_qry_schema.begin(); it_scm != sky_qry_schema.end(); ++it_scm) {
                     const struct col_info ci(col_idx, (*it_scm).type,
                                              (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
@@ -658,19 +663,23 @@ void worker_exec_query_op()
                     col_idx++;
                 }
                 col_idx = 0;
+		// the tbl_schema is only those columns in qry-schema and preds vec
+		// we can just use the pushdown_cols_qry_schema in run-query.cc
+		// also, reset the col_idx
                 for (auto it_scm = sky_pushdown_cols_qry_schema.begin(); it_scm != sky_pushdown_cols_qry_schema.end(); ++it_scm) {
                     const struct col_info ci(col_idx, (*it_scm).type,
                                              (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
                     sky_process_tbl_schema.push_back(ci);
                     col_idx++;
                 }
-
+		
 		if (debug) {
 			cout << "DEBUG: query.cc: worker: sky_process_tbl_schema= " << endl
 			     << schemaToString(sky_process_tbl_schema) << endl;
 			cout << "DEBUG: query.cc: worker: sky_process_qry_schema= " << endl
 			     << schemaToString(sky_process_qry_schema) << endl;
 		}
+		// reconstruct the preds vector using the new tbl_schema
 		Tables::predicate_vec sky_process_qry_preds;
 		sky_process_qry_preds = predsFromString(sky_process_tbl_schema, predsToString(sky_qry_preds, sky_tbl_schema));
 		
