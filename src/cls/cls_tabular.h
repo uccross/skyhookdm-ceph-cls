@@ -148,6 +148,7 @@ struct query_op {
   std::string index2_schema;
   std::string query_preds;
   std::string groupby_cols;
+  std::string orderby_cols;
   std::string index_preds;
   std::string index2_preds;
 
@@ -174,6 +175,7 @@ struct query_op {
     encode(index2_schema, bl);
     encode(query_preds, bl);
     encode(groupby_cols, bl);
+    encode(orderby_cols, bl);
     encode(index_preds, bl);
     encode(index2_preds, bl);
   }
@@ -199,6 +201,7 @@ struct query_op {
     decode(index2_schema, bl);
     decode(query_preds, bl);
     decode(groupby_cols, bl);
+    decode(orderby_cols, bl);
     decode(index_preds, bl);
     decode(index2_preds, bl);
   }
@@ -222,6 +225,7 @@ struct query_op {
     s.append(" .index2_schema=" + index2_schema);
     s.append(" .query_preds=" + query_preds);
     s.append(" .groupby_cols=" + groupby_cols);
+    s.append(" .orderby_cols=" + orderby_cols);
     s.append(" .index_preds=" + index_preds);
     s.append(" .index2_preds=" + index2_preds);
     return s;
