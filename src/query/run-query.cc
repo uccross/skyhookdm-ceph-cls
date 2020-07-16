@@ -413,6 +413,44 @@ int main(int argc, char **argv)
     sky_idx_preds = predsFromString(sky_tbl_schema, index_preds);
     sky_idx2_preds = predsFromString(sky_tbl_schema, index2_preds);
 
+    // validate incoming query
+    if (groupby_cols != "" || hasAggPreds(sky_qry_preds)) {
+        schema_vec projection = schemaFromColNames(sky_tbl_schema, project_cols);
+        bool is_valid_query = true;
+        for (auto col : projection) {
+          bool is_present_in_groupby = false;
+          bool is_present_in_agg = false;
+          // check groupby
+          schema_vec groupby_columns = schemaFromColNames(sky_tbl_schema, groupby_cols);
+          for (auto it : groupby_columns) {
+            if (it.compareName(col.name)) {
+              is_present_in_groupby = true;
+              break;
+            }
+          }
+          // check aggs
+          for (auto it = sky_qry_preds.begin(); it != sky_qry_preds.end(); ++it) {
+            PredicateBase* p = *it;
+            if (p->isGlobalAgg()) {
+              int actual_col_id = p->colIdx();
+              for (auto c : sky_tbl_schema) {
+                if (c.idx == actual_col_id && c.name == col.name) {
+                  is_present_in_agg = true;
+                  break;
+                }
+              }
+            }
+          }
+          is_valid_query = is_present_in_groupby || is_present_in_agg;
+          if (!is_valid_query) break; 
+        }
+        if (!is_valid_query) {
+          std::cerr << "Invalid query: projected column should be present "
+                    << "either in aggregated function or GROUP BY argument" << std::endl;
+          exit(1);
+        }
+    }
+
     // verify and set the query schema, check for select *
     if (project_cols == PROJECT_DEFAULT) {
         for(auto it=sky_tbl_schema.begin(); it!=sky_tbl_schema.end(); ++it) {
