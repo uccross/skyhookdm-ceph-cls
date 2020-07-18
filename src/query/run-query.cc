@@ -465,25 +465,78 @@ int main(int argc, char **argv)
                 fastpath = true;
         }
     } else {
-        if (hasAggPreds(sky_qry_preds)) {
-            for (auto it = sky_qry_preds.begin();
-                 it != sky_qry_preds.end(); ++it) {
-                PredicateBase* p = *it;
-                if (p->isGlobalAgg()) {
-                    // build col info for agg pred type, append to query schema
-                    std::string op_str = skyOpTypeToString(p->opType());
-                    int agg_idx = AGG_COL_IDX.at(op_str);
-                    int agg_val_type = p->colType();
-                    bool is_key = false;
-                    bool nullable = false;
-                    std::string agg_name = skyOpTypeToString(p->opType());
-                    const struct col_info ci(agg_idx, agg_val_type,
-                                             is_key, nullable, agg_name);
-                    sky_qry_schema.push_back(ci);
-                }
-            }
+        // push final columns in sky_qry_schema
+        Tables::predicate_vec non_agg_preds;
+        Tables::predicate_vec agg_preds;
+
+        // segregating agg and non-agg preds
+        for (auto p : sky_qry_preds) {
+          if (p->isGlobalAgg()) agg_preds.push_back(p);
+          else non_agg_preds.push_back(p);
+        }
+
+        // if aggs not present; schema id obtained from project columns directly
+        if (agg_preds.empty()) {
+          sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
         } else {
-            sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
+          // step-1: check if --project contains agg preds; throw error if not
+          sky_qry_schema.clear();
+          Tables::schema_vec schema = schemaFromColNames(sky_tbl_schema, project_cols);
+          bool is_valid_project = true;
+          // iterating through agg predicates to perform check
+          for (auto pred : agg_preds) {
+            bool is_projected = false;
+            int col_id = pred->colIdx();
+            for (auto col : schema) {
+              if (col.idx == col_id) {
+                is_projected = true;
+                break;
+              }
+            }
+            if (!is_projected) {
+              is_valid_project = false;
+              break;
+            }
+          }
+          // throw error if project does not contain agg columns
+          if (!is_valid_project) {
+            std::cerr << "Invalid query: projected columns do not contain "
+                    << "columns in aggregated function" << std::endl;
+            exit(1);
+          }
+          // step-2 : build final query schema with modified agg columns
+          for (auto col : schema) {
+            // check if this column is being aggregated over
+            bool is_being_aggregated = false;
+            for (auto pred : agg_preds) {
+              int col_id = pred->colIdx();
+              if (col.idx == col_id) {
+                is_being_aggregated = true;
+                // if yes, modify and push
+                std::string op_str = skyOpTypeToString(pred->opType());
+                int agg_idx = AGG_COL_IDX.at(op_str);
+                int agg_val_type = pred->colType();
+                bool is_key = false;
+                bool nullable = false;
+                std::string agg_name;
+                int actual_col_id = pred->colIdx();
+                for (auto col : sky_tbl_schema) {
+                    if (col.idx == actual_col_id) {
+                        agg_name = col.name;
+                        break;
+                    }
+                }
+                const struct col_info ci(agg_idx, agg_val_type,
+                                          is_key, nullable, agg_name);
+                sky_qry_schema.push_back(ci);
+                break;
+              }
+            }
+            // if not, push it as it is
+            if (!is_being_aggregated) {
+              sky_qry_schema.push_back(col);
+            }
+          }
         }
     }
 
