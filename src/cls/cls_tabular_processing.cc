@@ -374,6 +374,137 @@ int processArrowCol(
             col_idx_max = it->idx;
     }
 
+    // preds and row_nums are empty, we copy the entire columns to output table
+    if (preds.empty() && row_nums.empty()) {
+        std::vector<std::shared_ptr<arrow::ChunkedArray>> chunked_array_list;
+
+        // Iterate through query schema vector to get the details of columns i.e name and type.
+        for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
+            col_info col = *it;
+            chunked_array_list.push_back(input_table->column(col.idx));
+            // Add the details of column (Name and Datatype)
+            switch(col.type) {
+                case SDT_BOOL: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::boolean()));
+                    break;
+                }
+                case SDT_INT8: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
+                    break;
+                }
+                case SDT_INT16: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int16()));
+                    break;
+                }
+                case SDT_INT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int32()));
+                    break;
+                }
+                case SDT_INT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int64()));
+                    break;
+                }
+                case SDT_UINT8: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
+                    break;
+                }
+                case SDT_UINT16: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint16()));
+                    break;
+                }
+                case SDT_UINT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint32()));
+                    break;
+                }
+                case SDT_UINT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint64()));
+                    break;
+                }
+                case SDT_FLOAT: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float32()));
+                    break;
+                }
+                case SDT_DOUBLE: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float64()));
+                    break;
+                }
+                case SDT_CHAR: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
+                    break;
+                }
+                case SDT_UCHAR: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
+                    break;
+                }
+                case SDT_DATE:
+                case SDT_STRING: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::utf8()));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_BOOL: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::boolean())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_INT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_UINT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_INT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int64())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_UINT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint64())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_FLOAT: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_DOUBLE: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float64())));
+                    break;
+                }
+                default: {
+                    errcode = TablesErrCodes::UnsupportedSkyDataType;
+                    errmsg.append("ERROR processArrowCol()");
+                    return errcode;
+                }
+            }
+        }
+        // Add skyhook metadata to arrow metadata.
+        std::shared_ptr<arrow::KeyValueMetadata> output_tbl_metadata (new arrow::KeyValueMetadata);
+        output_tbl_metadata->Append(ToString(METADATA_SKYHOOK_VERSION),
+                                    metadata->value(METADATA_SKYHOOK_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA_VERSION),
+                                    metadata->value(METADATA_DATA_SCHEMA_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_STRUCTURE_VERSION),
+                                    metadata->value(METADATA_DATA_STRUCTURE_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_FORMAT_TYPE),
+                                    metadata->value(METADATA_DATA_FORMAT_TYPE));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA),
+                                    schemaToString(query_schema));
+        output_tbl_metadata->Append(ToString(METADATA_DB_SCHEMA),
+                                    metadata->value(METADATA_DB_SCHEMA));
+        output_tbl_metadata->Append(ToString(METADATA_TABLE_NAME),
+                                    metadata->value(METADATA_TABLE_NAME));
+        output_tbl_metadata->Append(ToString(METADATA_NUM_ROWS),
+                                    std::to_string(nrows));
+
+        // Generate schema from schema vector and add the metadata
+        schema = std::make_shared<arrow::Schema>(output_tbl_fields_vec, output_tbl_metadata);
+
+        // Finally, create a arrow table from schema and array vector
+        *table = arrow::Table::Make(schema, chunked_array_list);
+
+        return errcode;
+
+    }
+
     // Apply predicates to all the columns and get the rows which
     // satifies the condition
     if (!preds.empty()) {
