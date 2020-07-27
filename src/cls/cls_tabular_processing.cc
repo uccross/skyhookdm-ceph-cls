@@ -381,6 +381,12 @@ int processArrowCol(
         // Iterate through query schema vector to get the details of columns i.e name and type.
         for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
             col_info col = *it;
+	    std::shared_ptr<arrow::ChunkedArray> cur_col = input_table->column(col.idx);
+	    if (chunked_array_list.size() > 0 && chunked_array_list[0]->length() != cur_col->length()) {
+	    	errcode = TablesErrCodes::ArrowStatusErr;
+                errmsg.append("ERROR processArrowCol(), input table columns length not the same");
+                return errcode;
+	    }
             chunked_array_list.push_back(input_table->column(col.idx));
             // Add the details of column (Name and Datatype)
             switch(col.type) {
