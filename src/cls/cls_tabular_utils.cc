@@ -2452,6 +2452,8 @@ int extract_arrow_from_buffer(std::shared_ptr<arrow::Table>* table, const std::s
         *table = arrow::Table::Make(schema, array_list);
     }
     else {
+        //https://github.com/apache/arrow/blob/master/cpp/src/arrow/table.cc#L280
+        // The num_chunks in each columns of the result table is decided by batch_vec size().
         arrow::Result<std::shared_ptr<arrow::Table>> result = arrow::Table::FromRecordBatches(batch_vec);
         if (result.ok()) {
             *table = std::move(result).ValueOrDie();
