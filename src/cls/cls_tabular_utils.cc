@@ -1776,7 +1776,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
 // used by processArrow column-wise methods only
 // returns true if the record passes all of the predicates (and/or)
 void applyPredicatesArrowCol(predicate_vec& pv,
-                             std::shared_ptr<arrow::Array> col_array,
+                             std::shared_ptr<arrow::ChunkedArray> col_chunk_array,
                              int col_idx, std::vector<uint32_t>& row_nums)
 {
     std::vector<uint32_t> input_rows = row_nums;
@@ -1787,7 +1787,8 @@ void applyPredicatesArrowCol(predicate_vec& pv,
 
     if (row_nums.empty()) {
         // Considering each columns have same number of rows
-        nrows = col_array->length();
+        // total length of chunnked  array
+        nrows = col_chunk_array->length();
     }
     else {
         nrows = row_nums.size();
@@ -1807,6 +1808,18 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                 row_idx = i;
             else
                 row_idx = row_nums[i];
+
+            // First, we need to use the row_idx to find which chunks it lies in
+            // and the specific position in this chunk
+            int cur_chunk_idx = row_idx;
+            int curr_chunk = 0;
+            while (curr_chunk < col_chunk_array->num_chunks() && cur_chunk_idx >= col_chunk_array->chunk(curr_chunk)->length()) {
+              cur_chunk_idx -= col_chunk_array->chunk(curr_chunk)->length();
+              curr_chunk++;
+            }
+            // col_array is the current chunk, row_idx is the index in this chunk
+            std::shared_ptr<arrow::Array> col_array = col_chunk_array->chunk(curr_chunk);
+            row_idx = cur_chunk_idx;
 
             switch((*it)->colType()) {
 

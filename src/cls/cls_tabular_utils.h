@@ -890,7 +890,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                           int element_index);
 
 void applyPredicatesArrowCol(predicate_vec& pv,
-                             std::shared_ptr<arrow::Array> col_array,
+                             std::shared_ptr<arrow::ChunkedArray> col_chunk_array,
                              int col_idx, std::vector<uint32_t>& row_nums);
 
 inline
