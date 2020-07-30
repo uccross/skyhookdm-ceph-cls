@@ -517,9 +517,9 @@ int processArrowCol(
         // Iterate through each column in print the data inside it
         for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
             col_info col = *it;
-
+            // There could be multiple chunks in one columns's chunkedArray
             applyPredicatesArrowCol(preds,
-                                    input_table->column(col.idx)->chunk(0),
+                                    input_table->column(col.idx),
                                     col.idx,
                                     result_rows);
         }
@@ -696,14 +696,30 @@ int processArrowCol(
     }
 
     // Copy values from input table rows to the output table rows
+    // the num of rows is 32 bit int, while the Arrow tables in c++ can hold 64 bit int rows,
+    // Do we need to consider this limit in the future?
     for (uint32_t i = 0; i < nrows; i++) {
 
         uint32_t rnum = i;
         if (!preds.empty())
             rnum = result_rows[i];
 
+        // Use the rnum to find which chunks it lies in and the specific position in this chunk
+        int cur_chunk_idx = rnum;
+        int curr_chunk = 0;
+        // The num of chunks and chunks sizes should be the same for every columns
+        // can check this: https://github.com/apache/arrow/blob/master/cpp/src/arrow/table.cc#L280
+        auto first_col_chunk_array = input_table->column(0);
+        // find the correct chunk and chunk index
+        // normally should be the same as 0, rnum
+        while (curr_chunk < first_col_chunk_array->num_chunks() && cur_chunk_idx >= first_col_chunk_array->chunk(curr_chunk)->length()) {
+          cur_chunk_idx -= first_col_chunk_array->chunk(curr_chunk)->length();
+          curr_chunk++;
+        }
+        rnum = cur_chunk_idx;
+
         // skip dead rows.
-        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(0);
+        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(curr_chunk);
         if (std::static_pointer_cast<arrow::BooleanArray>(delvec_chunk)->Value(rnum) == true) continue;
 
         processed_rows++;
@@ -714,7 +730,7 @@ int processArrowCol(
             col_info col = *it;
             auto builder = builder_list[std::distance(query_schema.begin(), it)];
 
-            auto processing_chunk = input_table->column(col.idx)->chunk(0);
+            auto processing_chunk = input_table->column(col.idx)->chunk(curr_chunk);
 
             if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
                 errcode = TablesErrCodes::RequestedColIndexOOB;
