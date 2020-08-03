@@ -908,6 +908,31 @@ bool compare(const bool& val1, const bool& val2, const int& op);
 inline  // used for date types or regex on alphanumeric types
 bool compare(const std::string& val1, const std::string& val2, const int& op, const int& data_type);
 
+// used for Arrow::ListType Boolean
+inline
+bool compareList(const std::shared_ptr<arrow::BooleanArray> list_arr_values,
+    const int row_idx, const bool& val2, const int& op);
+
+inline
+bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
+                 const int row_idx, const std::string& val2, const int& op, const int& data_type);
+
+inline
+bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
+                 const int row_idx, const int64_t& val2, const int& op);
+
+inline
+bool compareList(const std::shared_ptr<arrow::UInt8Array> list_arr_values,
+                 const int row_idx, const std::string& val2, const int& op, const int& data_type);
+
+inline
+bool compareList(const std::shared_ptr<arrow::UInt8Array> list_arr_values,
+                 const int row_idx, const uint64_t& val2, const int& op);
+
+inline
+bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
+                 const int row_idx, const int64_t& val2, const int& op);
+
 template <typename T>
 T computeAgg(const T& val, const T& oldval, const int& op) {
 
