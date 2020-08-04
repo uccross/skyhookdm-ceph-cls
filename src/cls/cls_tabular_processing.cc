@@ -22,6 +22,8 @@ namespace Tables {
  * @param[in] tbl_schema   : Schema of an input table
  * @param[in] query_schema : Schema of an query
  * @param[in] preds        : Predicates for the query
+ * @param[in] groupby_cols : GROUP BY columns in a string
+ * @param[in] orderby_cols : ORDER BY columns in a string
  * @param[in] dataptr      : Input table in the form of char array
  * @param[in] datasz       : Size of char array
  * @param[out] errmsg      : Error message
@@ -34,6 +36,8 @@ int processSkyFb(
     schema_vec& data_schema,
     schema_vec& query_schema,
     predicate_vec& preds,
+    std::string& groupby_cols,
+    std::string& orderby_cols,
     const char* dataptr,
     const size_t datasz,
     std::string& errmsg,
@@ -335,6 +339,8 @@ int processArrowCol(
         schema_vec& tbl_schema,
         schema_vec& query_schema,
         predicate_vec& preds,
+        std::string& groupby_cols,
+        std::string& orderby_cols,
         const char* dataptr,
         const size_t datasz,
         std::string& errmsg,
