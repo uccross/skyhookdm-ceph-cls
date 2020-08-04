@@ -414,10 +414,9 @@ int main(int argc, char **argv)
     sky_idx_preds = predsFromString(sky_tbl_schema, index_preds);
     sky_idx2_preds = predsFromString(sky_tbl_schema, index2_preds);
 
-
     if (pushdown_cols_only == true) {
-        assert (use_cls == true);
-
+      assert(use_cls == true);
+    }
     // validate incoming query
     if (groupby_cols != "" || hasAggPreds(sky_qry_preds)) {
         schema_vec projection = schemaFromColNames(sky_tbl_schema, project_cols);
@@ -454,6 +453,7 @@ int main(int argc, char **argv)
                     << "either in aggregated function or GROUP BY argument" << std::endl;
           exit(1);
         }
+
     }
 
     // verify and set the query schema, check for select *
