@@ -61,6 +61,8 @@ std::string qop_query_schema;
 std::string qop_index_schema;
 std::string qop_index2_schema;
 std::string qop_query_preds;
+std::string qop_groupby_cols;
+std::string qop_orderby_cols;
 std::string qop_index_preds;
 std::string qop_index2_preds;
 
@@ -691,6 +693,8 @@ void worker_exec_query_op()
                                        sky_process_tbl_schema,
                                        sky_process_qry_schema,
                                        sky_process_qry_preds,
+                                       qop_groupby_cols,
+                                       qop_orderby_cols,
                                        fbmeta.blob_data,
                                        fbmeta.blob_size,
                                        errmsg);
@@ -725,6 +729,8 @@ void worker_exec_query_op()
                               sky_tbl_schema,
                               sky_qry_schema,
                               sky_qry_preds,
+                              qop_groupby_cols,
+                              qop_orderby_cols,
                               fbmeta.blob_data,
                               fbmeta.blob_size,
                               errmsg);

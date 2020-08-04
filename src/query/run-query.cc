@@ -49,6 +49,8 @@ int main(int argc, char **argv)
   std::string index_schema;
   std::string index2_schema;
   std::string query_preds;
+  std::string groupby_cols;
+  std::string orderby_cols;
   std::string index_preds;
   std::string index2_preds;
   std::string index_cols;
@@ -150,6 +152,8 @@ int main(int argc, char **argv)
     ("index-cols", po::value<std::string>(&index_cols)->default_value(""), project_help_msg.c_str())
     ("index2-cols", po::value<std::string>(&index2_cols)->default_value(""), project_help_msg.c_str())
     ("project", po::value<std::string>(&project_cols)->default_value(Tables::PROJECT_DEFAULT), project_help_msg.c_str())
+    ("groupby", po::value<std::string>(&groupby_cols)->default_value(""), project_help_msg.c_str())
+    ("orderby", po::value<std::string>(&orderby_cols)->default_value(""), project_help_msg.c_str())
     ("index-preds", po::value<std::string>(&index_preds)->default_value(""), select_help_msg.c_str())
     ("index2-preds", po::value<std::string>(&index2_preds)->default_value(""), select_help_msg.c_str())
     ("select", po::value<std::string>(&query_preds)->default_value(Tables::SELECT_DEFAULT), select_help_msg.c_str())
@@ -328,6 +332,8 @@ int main(int argc, char **argv)
     boost::trim(index2_cols);
     boost::trim(project_cols);
     boost::trim(query_preds);
+    boost::trim(groupby_cols);
+    boost::trim(orderby_cols);
     boost::trim(index_preds);
     boost::trim(index2_preds);
     boost::trim(text_index_delims);
@@ -340,6 +346,8 @@ int main(int argc, char **argv)
     boost::to_upper(index_cols);
     boost::to_upper(index2_cols);
     boost::to_upper(project_cols);
+    boost::to_upper(groupby_cols);
+    boost::to_upper(orderby_cols);
     boost::to_upper(trans_format_str);
     boost::to_upper(client_format_str);
 
@@ -406,8 +414,46 @@ int main(int argc, char **argv)
     sky_idx_preds = predsFromString(sky_tbl_schema, index_preds);
     sky_idx2_preds = predsFromString(sky_tbl_schema, index2_preds);
 
+
     if (pushdown_cols_only == true) {
         assert (use_cls == true);
+
+    // validate incoming query
+    if (groupby_cols != "" || hasAggPreds(sky_qry_preds)) {
+        schema_vec projection = schemaFromColNames(sky_tbl_schema, project_cols);
+        bool is_valid_query = true;
+        for (auto col : projection) {
+          bool is_present_in_groupby = false;
+          bool is_present_in_agg = false;
+          // check groupby
+          schema_vec groupby_columns = schemaFromColNames(sky_tbl_schema, groupby_cols);
+          for (auto it : groupby_columns) {
+            if (it.compareName(col.name)) {
+              is_present_in_groupby = true;
+              break;
+            }
+          }
+          // check aggs
+          for (auto it = sky_qry_preds.begin(); it != sky_qry_preds.end(); ++it) {
+            PredicateBase* p = *it;
+            if (p->isGlobalAgg()) {
+              int actual_col_id = p->colIdx();
+              for (auto c : sky_tbl_schema) {
+                if (c.idx == actual_col_id && c.name == col.name) {
+                  is_present_in_agg = true;
+                  break;
+                }
+              }
+            }
+          }
+          is_valid_query = is_present_in_groupby || is_present_in_agg;
+          if (!is_valid_query) break; 
+        }
+        if (!is_valid_query) {
+          std::cerr << "Invalid query: projected column should be present "
+                    << "either in aggregated function or GROUP BY argument" << std::endl;
+          exit(1);
+        }
     }
 
     // verify and set the query schema, check for select *
@@ -424,25 +470,78 @@ int main(int argc, char **argv)
             }
         }
     } else {
-        if (hasAggPreds(sky_qry_preds)) {
-            for (auto it = sky_qry_preds.begin();
-                 it != sky_qry_preds.end(); ++it) {
-                PredicateBase* p = *it;
-                if (p->isGlobalAgg()) {
-                    // build col info for agg pred type, append to query schema
-                    std::string op_str = skyOpTypeToString(p->opType());
-                    int agg_idx = AGG_COL_IDX.at(op_str);
-                    int agg_val_type = p->colType();
-                    bool is_key = false;
-                    bool nullable = false;
-                    std::string agg_name = skyOpTypeToString(p->opType());
-                    const struct col_info ci(agg_idx, agg_val_type,
-                                             is_key, nullable, agg_name);
-                    sky_qry_schema.push_back(ci);
-                }
-            }
+        // push final columns in sky_qry_schema
+        Tables::predicate_vec non_agg_preds;
+        Tables::predicate_vec agg_preds;
+
+        // segregating agg and non-agg preds
+        for (auto p : sky_qry_preds) {
+          if (p->isGlobalAgg()) agg_preds.push_back(p);
+          else non_agg_preds.push_back(p);
+        }
+
+        // if aggs not present; schema id obtained from project columns directly
+        if (agg_preds.empty()) {
+          sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
         } else {
-            sky_qry_schema = schemaFromColNames(sky_tbl_schema, project_cols);
+          // step-1: check if --project contains agg preds; throw error if not
+          sky_qry_schema.clear();
+          Tables::schema_vec schema = schemaFromColNames(sky_tbl_schema, project_cols);
+          bool is_valid_project = true;
+          // iterating through agg predicates to perform check
+          for (auto pred : agg_preds) {
+            bool is_projected = false;
+            int col_id = pred->colIdx();
+            for (auto col : schema) {
+              if (col.idx == col_id) {
+                is_projected = true;
+                break;
+              }
+            }
+            if (!is_projected) {
+              is_valid_project = false;
+              break;
+            }
+          }
+          // throw error if project does not contain agg columns
+          if (!is_valid_project) {
+            std::cerr << "Invalid query: projected columns do not contain "
+                    << "columns in aggregated function" << std::endl;
+            exit(1);
+          }
+          // step-2 : build final query schema with modified agg columns
+          for (auto col : schema) {
+            // check if this column is being aggregated over
+            bool is_being_aggregated = false;
+            for (auto pred : agg_preds) {
+              int col_id = pred->colIdx();
+              if (col.idx == col_id) {
+                is_being_aggregated = true;
+                // if yes, modify and push
+                std::string op_str = skyOpTypeToString(pred->opType());
+                int agg_idx = AGG_COL_IDX.at(op_str);
+                int agg_val_type = pred->colType();
+                bool is_key = false;
+                bool nullable = false;
+                std::string agg_name;
+                int actual_col_id = pred->colIdx();
+                for (auto col : sky_tbl_schema) {
+                    if (col.idx == actual_col_id) {
+                        agg_name = col.name;
+                        break;
+                    }
+                }
+                const struct col_info ci(agg_idx, agg_val_type,
+                                          is_key, nullable, agg_name);
+                sky_qry_schema.push_back(ci);
+                break;
+              }
+            }
+            // if not, push it as it is
+            if (!is_being_aggregated) {
+              sky_qry_schema.push_back(col);
+            }
+          }
         }
         // if we only push down columns (project all related columns, let preds be empty)
         if (pushdown_cols_only) {
@@ -639,6 +738,8 @@ int main(int argc, char **argv)
     qop_query_preds = predsToString(sky_qry_preds, sky_tbl_schema);
     qop_index_preds = predsToString(sky_idx_preds, sky_tbl_schema);
     qop_index2_preds = predsToString(sky_idx2_preds, sky_tbl_schema);
+    qop_groupby_cols = groupby_cols;
+    qop_orderby_cols = orderby_cols;
     qop_result_format = skyhook_output_format;
     idx_op_idx_unique = idx_unique;
     idx_op_batch_size = index_batch_size;
@@ -670,6 +771,8 @@ int main(int argc, char **argv)
             cout << "DEBUG: run-query: qop_index_schema=\n" << qop_index_schema << endl;
             cout << "DEBUG: run-query: qop_index2_schema=\n" << qop_index2_schema << endl;
             cout << "DEBUG: run-query: qop_query_preds=" << qop_query_preds << endl;
+            cout << "DEBUG: run-query: qop_groupby_cols=" << qop_groupby_cols << endl;
+            cout << "DEBUG: run-query: qop_orderby_cols=" << qop_orderby_cols << endl;
             cout << "DEBUG: run-query: qop_index_preds=" << qop_index_preds << endl;
             cout << "DEBUG: run-query: qop_index2_preds=" << qop_index2_preds << endl;
             cout << "DEBUG: run-query: qop_result_format=" << qop_result_format << endl;
@@ -934,6 +1037,8 @@ int main(int argc, char **argv)
         op.index_schema = qop_index_schema;
         op.index2_schema = qop_index2_schema;
         op.query_preds = qop_query_preds;
+        op.groupby_cols = qop_groupby_cols;
+        op.orderby_cols = qop_orderby_cols;
         op.index_preds = qop_index_preds;
         op.index2_preds = qop_index2_preds;
         ceph::bufferlist inbl;

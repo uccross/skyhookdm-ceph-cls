@@ -94,6 +94,8 @@ extern std::string qop_query_schema;
 extern std::string qop_index_schema;
 extern std::string qop_index2_schema;
 extern std::string qop_query_preds;
+extern std::string qop_groupby_cols;
+extern std::string qop_orderby_cols;
 extern std::string qop_index_preds;
 extern std::string qop_index2_preds;
 
