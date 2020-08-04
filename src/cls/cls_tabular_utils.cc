@@ -2056,7 +2056,9 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
                     auto list_arr_values = std::static_pointer_cast<arrow::Int8Array>(list_arr->values());
                     int8_t predval = p->Val();
-                    if (compare(list_arr_values, row_idx, static_cast<int64_t>(predval), p->opType()))
+                    int64_t start = list_arr->value_offset(row_idx);
+                    int64_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    if (compare(list_arr_values, start, end, static_cast<int64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_INT16:
@@ -2308,8 +2310,24 @@ bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
 }
 
 bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
-                 const int row_idx, const int64_t& val2, const int& op) {
-    return false;
+                 const int64_t start, const int64_t end, const int64_t& val2, const int& op) {
+
+  int8_t max_val = list_arr_values->Value(start);
+  int8_t min_val = list_arr_values->Value(start);
+  for (int64_t i = start; i < end; i++) {
+    int8_t val = list_arr_values->Value(i);
+    max_val = val > max_val ? val : max_val;
+    min_val = val < max_val ? val : min_val;
+  }
+  switch (op) {
+  case SOT_max:
+    break;
+  case SOT_min:
+    break;
+  case SOT_cnt:
+    break;
+  }
+  return false;
 }
 
 bool compareList(const std::shared_ptr<arrow::UInt8Array> list_arr_values,
