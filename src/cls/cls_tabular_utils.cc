@@ -1996,13 +1996,13 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     break;
                 }
                 case SDT_JAGGEDARRAY_BOOL:
-                    TypedPredicate<bool>* p =                       \
-                        dynamic_cast<TypedPredicate<bool>*>(*it);
-                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
-                    auto list_arr_values = std::static_pointer_cast<arrow::BooleanArray>(list_arr->values());
-                    bool predval = p->Val();
-                    if (compare(list_arr_values, row_idx, predval, p->opType()))
-                        passed_rows.push_back(row_idx);
+//                    TypedPredicate<bool>* p =                       \
+//                        dynamic_cast<TypedPredicate<bool>*>(*it);
+//                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+//                    auto list_arr_values = std::static_pointer_cast<arrow::BooleanArray>(list_arr->values());
+//                    bool predval = p->Val();
+//                    if (compare(list_arr_values, row_idx, predval, p->opType()))
+//                        passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_CHAR:
 //                    TypedPredicate<char>* p=                        \
@@ -2055,7 +2055,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_INT16:
@@ -2071,7 +2071,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_INT32:
@@ -2088,7 +2088,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_INT64:
@@ -2104,7 +2104,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_UINT8:
@@ -2119,7 +2119,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_UNT16:
@@ -2134,7 +2134,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_UINT32:
@@ -2149,7 +2149,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_UINT64:
@@ -2164,7 +2164,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(list_arr_values->Value(i));
                     }
-                    if (compare(list_arr_values, predval, p->opType()))
+                    if (compareList(list_arr_values, predval, p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_FLOAT:
@@ -2180,7 +2180,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<double>(list_arr_values->Value(i)));
                     }
-                    if (compare(list_arr_values, static_cast<double>(predval), p->opType()))
+                    if (compareList(list_arr_values, static_cast<double>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
                 case SDT_JAGGEDARRAY_DOUBLE:
@@ -2195,7 +2195,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(list_arr_values->Value(i));
                     }
-                    if (compare(list_arr_values, predval, p->opType()))
+                    if (compareList(list_arr_values, predval, p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
 
