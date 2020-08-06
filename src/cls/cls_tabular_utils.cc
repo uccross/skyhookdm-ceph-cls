@@ -2042,7 +2042,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
 //                            passed_rows.push_back(row_idx);
 //                    }
                     break;
-                case SDT_JAGGEDARRAY_INT8:
+                case SDT_JAGGEDARRAY_INT8: {
                     TypedPredicate<int8_t>* p =                       \
                         dynamic_cast<TypedPredicate<int8_t>*>(*it);
                     int8_t predval = p->Val();
@@ -2055,10 +2055,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_INT16:
+		}
+                case SDT_JAGGEDARRAY_INT16: {
                     TypedPredicate<int16_t>* p =                       \
                         dynamic_cast<TypedPredicate<int16_t>*>(*it);
                     int16_t predval = p->Val();
@@ -2071,10 +2072,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_INT32:
+		}
+                case SDT_JAGGEDARRAY_INT32: {
                     TypedPredicate<int32_t>* p =                       \
                         dynamic_cast<TypedPredicate<int32_t>*>(*it);
                     int32_t predval = p->Val();
@@ -2088,10 +2090,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_INT64:
+		}
+                case SDT_JAGGEDARRAY_INT64: {
                     TypedPredicate<int64_t>* p =                       \
                         dynamic_cast<TypedPredicate<int64_t>*>(*it);
                     int64_t predval = p->Val();
@@ -2104,10 +2107,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                       row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<int64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
                       passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_UINT8:
+		}
+                case SDT_JAGGEDARRAY_UINT8: {
                     TypedPredicate<uint8_t>* p =                       \
                         dynamic_cast<TypedPredicate<uint8_t>*>(*it);
                     uint8_t predval = p->Val();
@@ -2119,10 +2123,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_UNT16:
+		}
+                case SDT_JAGGEDARRAY_UNT16: {
                     TypedPredicate<uint16_t>* p =                       \
                         dynamic_cast<TypedPredicate<uint16_t>*>(*it);
                     uint16_t predval = p->Val();
@@ -2134,10 +2139,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_UINT32:
+		}
+                case SDT_JAGGEDARRAY_UINT32: {
                     TypedPredicate<uint32_t>* p =                       \
                         dynamic_cast<TypedPredicate<uint32_t>*>(*it);
                     uint32_t predval = p->Val();
@@ -2149,10 +2155,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<uint64_t>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_UINT64:
+		}
+                case SDT_JAGGEDARRAY_UINT64: {
                     TypedPredicate<uint64_t>* p =                       \
                         dynamic_cast<TypedPredicate<uint64_t>*>(*it);
                     uint64_t predval = p->Val();
@@ -2164,10 +2171,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(list_arr_values->Value(i));
                     }
-                    if (compareList(list_arr_values, predval, p->opType()))
+                    if (compareList(row_list_values, predval, p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_FLOAT:
+		}
+                case SDT_JAGGEDARRAY_FLOAT: {
                     TypedPredicate<float>* p =                      \
                         dynamic_cast<TypedPredicate<float>*>(*it);
                     float predval = p->Val();
@@ -2180,10 +2188,11 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(static_cast<double>(list_arr_values->Value(i)));
                     }
-                    if (compareList(list_arr_values, static_cast<double>(predval), p->opType()))
+                    if (compareList(row_list_values, static_cast<double>(predval), p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-                case SDT_JAGGEDARRAY_DOUBLE:
+		}
+                case SDT_JAGGEDARRAY_DOUBLE: {
                     TypedPredicate<double>* p =                     \
                         dynamic_cast<TypedPredicate<double>*>(*it);
                     double predval = p->Val();
@@ -2195,10 +2204,10 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     for (int32_t i = start; i < end; i++) {
                         row_list_values.push_back(list_arr_values->Value(i));
                     }
-                    if (compareList(list_arr_values, predval, p->opType()))
+                    if (compareList(row_list_values, predval, p->opType()))
                         passed_rows.push_back(row_idx);
                     break;
-
+		}
                 default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
             }
         }
