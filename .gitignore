@@ -1,5 +1,4 @@
-src/progly/katfiles/dataset_arity*
-
+build/
 ceph/
 data/
 test
