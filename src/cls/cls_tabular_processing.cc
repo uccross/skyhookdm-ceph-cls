@@ -85,6 +85,7 @@ int processSkyFb(
     // 1. check the preds for passing
     // 2a. accumulate agg preds (return flexbuf built after all rows) or
     // 2b. build the return flatbuf inline below from each row's projection
+    std::vector<sky_rec> non_agg_passed_rows;
     for (uint32_t i = 0; i < nrows; i++) {
 
         // process row i or the specified row number
@@ -105,9 +106,13 @@ int processSkyFb(
 
         // apply predicates to this record
         if (!preds.empty()) {
-            bool pass = applyPredicates(preds, rec);
+            if(non_agg_preds.empty()) {
+                non_agg_passed_rows.push_back(rec);
+            }
+            bool pass = applyPredicates(non_agg_preds, rec);
             if (!pass) continue;  // skip non matching rows.
         }
+        non_agg_passed_rows.push_back(rec);
 
         // note: agg preds are accumlated in the predicate itself during
         // applyPredicates above, then later added to result fb outside
@@ -120,8 +125,56 @@ int processSkyFb(
             // TODO:  just pass through row table offset to new data_vec
             // (which is also type offs), do not rebuild row table and flexbuf
         }
+    }
 
-        // build the return projection for this row.
+    // Apply GROUP BY
+    bool groupby_arg = false;
+    if(groupby_cols != "") groupby_arg = true;
+
+    // building map of key to rows for groupby
+    std::map<std::vector<string>, std::vector<sky_rec>> groupby_map;
+
+    std::vector<sky_rec> processed_rows;
+
+    // if groupby performed
+    if(!groupby_map.empty()) {
+        // aggs not present
+        if(agg_preds.empty()) {
+            for (auto p : groupby_map) {
+                std::vector<sky_rec> rows = p.second;
+                // act like DISTINCT, picks the first row
+                processed_rows.push_back(rows[0]);
+            }
+        }
+        // aggs present
+        // else {
+        //     for(auto p : groupby_map) {
+        //         std::vector<sky_rec> rows = p.second;
+        //         sky_rec rec = applyAggPreds(rows, agg_preds);
+        //         processed_rows.push_back(rec);
+        //     }
+        // }
+    }
+    // no groupby
+    else {
+        // aggs not present
+        if(agg_preds.empty()) {
+            for(auto r : non_agg_passed_rows)
+                processed_rows.push_back(r);
+        }
+        // // aggs present
+        // else {
+        //     sky_rec rec = applyAggPreds(non_agg_passed_rows, agg_preds);
+        //     processed_rows.push_back(rec);
+        // }
+    }
+
+    // Apply ORDER BY
+    bool orderby_arg = false;
+    if(orderby_cols != "") orderby_arg = true;
+
+    // Return projection for all processed rows
+    for(auto rec : processed_rows) {
         auto row = rec.data.AsVector();
         flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
         flatbuffers::Offset<flatbuffers::Vector<unsigned char>> datavec;
@@ -212,82 +265,6 @@ int processSkyFb(
         auto nullbits = flatbldr.CreateVector(rec.nullbits);
         flatbuffers::Offset<Tables::Record> row_off = \
                 Tables::CreateRecord(flatbldr, rec.RID, nullbits, row_data);
-
-        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
-        dead_rows.push_back(0);
-        offs.push_back(row_off);
-    }
-
-    // here we build the return flatbuf result with agg values that were
-    // accumulated above in applyPredicates (agg predicates do not return
-    // true false but update their internal values each time processed
-    if (encode_aggs) { //  encode accumulated agg pred val into return flexbuf
-        PredicateBase* pb;
-        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
-        flexbldr->Vector([&]() {
-            for (auto itp = preds.begin(); itp != preds.end(); ++itp) {
-
-                // assumes preds appear in same order as return schema
-                if (!(*itp)->isGlobalAgg()) continue;
-                pb = *itp;
-                switch(pb->colType()) {  // encode agg data val into flexbuf
-                    case SDT_INT64: {
-                        TypedPredicate<int64_t>* p = \
-                                dynamic_cast<TypedPredicate<int64_t>*>(pb);
-                        int64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
-                        break;
-                    }
-                    case SDT_UINT32: {
-                        TypedPredicate<uint32_t>* p = \
-                                dynamic_cast<TypedPredicate<uint32_t>*>(pb);
-                        uint32_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
-                        break;
-                    }
-                    case SDT_UINT64: {
-                        TypedPredicate<uint64_t>* p = \
-                                dynamic_cast<TypedPredicate<uint64_t>*>(pb);
-                        uint64_t agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
-                        break;
-                    }
-                    case SDT_FLOAT: {
-                        TypedPredicate<float>* p = \
-                                dynamic_cast<TypedPredicate<float>*>(pb);
-                        float agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
-                        break;
-                    }
-                    case SDT_DOUBLE: {
-                        TypedPredicate<double>* p = \
-                                dynamic_cast<TypedPredicate<double>*>(pb);
-                        double agg_val = p->Val();
-                        flexbldr->Add(agg_val);
-                        p->updateAgg(0);  // reset accumulated add val
-                        break;
-                    }
-                    default:  assert(UnsupportedAggDataType==0);
-                }
-            }
-        });
-        // finalize the row's projected data within our flexbuf
-        flexbldr->Finish();
-
-        // build the return ROW flatbuf that contains the flexbuf data
-        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
-        delete flexbldr;
-
-        // assume no nullbits in the agg results. ?
-        nullbits_vector nb(2,0);
-        auto nullbits = flatbldr.CreateVector(nb);
-        int RID = -1;  // agg recs only, since these are derived data
-        flatbuffers::Offset<Tables::Record> row_off = \
-            Tables::CreateRecord(flatbldr, RID, nullbits, row_data);
 
         // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
         dead_rows.push_back(0);
