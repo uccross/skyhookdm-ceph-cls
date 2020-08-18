@@ -2046,6 +2046,7 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                     TypedPredicate<int8_t>* p =                       \
                         dynamic_cast<TypedPredicate<int8_t>*>(*it);
                     int8_t predval = p->Val();
+
                     auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
                     auto list_arr_values = std::static_pointer_cast<arrow::Int8Array>(list_arr->values());
 
