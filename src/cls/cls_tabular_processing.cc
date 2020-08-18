@@ -55,6 +55,15 @@ int processSkyFb(
             col_idx_max = it->idx;
     }
 
+    // segregate predicates as agg and non_agg
+    predicate_vec agg_preds;
+    predicate_vec non_agg_preds;
+
+    for (auto p : preds) {
+        if(p->isGlobalAgg()) agg_preds.push_back(p);
+        else non_agg_preds.push_back(p);
+    }
+
     bool project_all = std::equal(data_schema.begin(), data_schema.end(),
                                   query_schema.begin(), compareColInfo);
 
