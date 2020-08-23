@@ -451,13 +451,56 @@ int processArrowCol(
         for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
             col_info col = *it;
 
-            applyPredicatesArrowCol(preds,
+            applyPredicatesArrowCol(non_agg_preds,
                                     input_table->column(col.idx)->chunk(0),
                                     col.idx,
                                     result_rows);
         }
         nrows = result_rows.size();
     }
+
+    bool groupby_arg = false;
+    if(groupby_cols != "") groupby_arg = true;
+    std::map<std::vector<string>, std::vector<uint32_t>> groupby_map;
+
+    std::vector<uint32_t> processed;
+
+    // --groupby passed
+    if(!groupby_map.empty()) {
+        // aggs not present
+        if(agg_preds.empty()) {
+            for (auto p : groupby_map) {
+                std::vector<uint32_t> rows = p.second;
+                // act like DISTINCT, picks the first row
+                processed.push_back(rows[0]);
+            }
+        }
+        // aggs present
+        // else {
+        //     for(auto p : groupby_map) {
+        //         std::vector<uint32_t> rows = p.second;
+        //         sky_rec rec = applyAggPreds(rows, agg_preds);
+        //         processed.push_back(rec);
+        //     }
+        // }
+    }
+
+    // no --groupby
+    else {
+        // aggs not present
+        if(agg_preds.empty()) {
+            for(auto r : result_rows)
+                processed.push_back(r);
+        }
+        // // aggs present
+        // else {
+        //     sky_rec rec = applyAggPreds(non_agg_passed_rows, agg_preds);
+        //     processed.push_back(rec);
+        // }
+    }
+
+    bool orderby_arg = false;
+    if(orderby_cols != "") orderby_arg = true;
 
     // At this point we have rows which satisfied the required predicates.
     // Now create the output arrow table from input table.
@@ -629,11 +672,12 @@ int processArrowCol(
     }
 
     // Copy values from input table rows to the output table rows
+    nrows = processed.size();
     for (uint32_t i = 0; i < nrows; i++) {
 
         uint32_t rnum = i;
         if (!preds.empty())
-            rnum = result_rows[i];
+            rnum = processed[i];
 
         // skip dead rows.
         auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(0);
