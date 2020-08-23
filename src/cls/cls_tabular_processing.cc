@@ -242,6 +242,191 @@ int processSkyFb(
     // Apply ORDER BY
     bool orderby_arg = false;
     if(orderby_cols != "") orderby_arg = true;
+    
+    // if orderby passed, then sort
+    if (orderby_arg) {
+        // ";SUPPKEY,ASC;ORDERKEY,DESC;"
+        boost::trim(orderby_cols);  // whitespace
+        boost::trim_if(orderby_cols, boost::is_any_of(PRED_DELIM_OUTER));
+
+        vector<std::string> orderby_items;
+        boost::split(orderby_items, orderby_cols, boost::is_any_of(PRED_DELIM_OUTER),
+                     boost::token_compress_on);
+        vector<std::string> orderby_descr;
+        
+        // store orderby (vector<col>, ASC/DESC)
+        vector<pair<schema_vec, std::string>> orderby_input;
+
+        for (auto it = orderby_items.begin(); it != orderby_items.end(); ++it) {
+            boost::split(orderby_descr, *it, boost::is_any_of(PRED_DELIM_INNER),
+                     boost::token_compress_on);
+            assert(orderby_descr.size() == 2);
+
+            std::string colname = orderby_descr.at(0);
+            std::string sort_type = orderby_descr.at(1);
+            boost::to_upper(colname);
+
+            schema_vec sv = schemaFromColNames(data_schema, colname);
+            if (sv.empty()) {
+                cerr << "Error: colname=" << colname << " not present in schema."
+                    << std::endl;
+                assert (TablesErrCodes::RequestedColNotPresent == 0);
+            }
+            orderby_input.push_back(make_pair(sv, sort_type));
+        }
+
+        // Validate input
+        for (auto arg : orderby_input) {
+            col_info col = arg.first[0];
+            std::string sort_by = arg.second;
+            if(!(sort_by == "ASC" || sort_by == "DESC")) {
+                cerr << "Error: sorting by " << sort_by << " not supported. Use ASC/DESC."
+                    << std::endl;
+                assert (TablesErrCodes::OpNotRecognized == 0);
+            }
+        }
+
+        auto custom_sort = [orderby_input] (sky_rec &rec1, sky_rec &rec2) -> bool
+        {
+            for (auto arg : orderby_input) {
+                col_info col = arg.first[0];
+                std::string sort_by = arg.second;
+                auto row1 = rec1.data.AsVector();
+                auto row2 = rec2.data.AsVector();
+                switch(col.type) {  // encode data val into flexbuf
+                        case SDT_INT8:{
+                            auto val1 = row1[col.idx].AsInt8();
+                            auto val2 = row2[col.idx].AsInt8();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }   
+                        case SDT_INT16: {
+                            auto val1 = row1[col.idx].AsInt16();
+                            auto val2 = row2[col.idx].AsInt16();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_INT32: {
+                            auto val1 = row1[col.idx].AsInt32();
+                            auto val2 = row2[col.idx].AsInt32();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_INT64: {
+                            auto val1 = row1[col.idx].AsInt64();
+                            auto val2 = row2[col.idx].AsInt64();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT8: {
+                            auto val1 = row1[col.idx].AsUInt8();
+                            auto val2 = row2[col.idx].AsUInt8();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT16: {
+                            auto val1 = row1[col.idx].AsUInt16();
+                            auto val2 = row2[col.idx].AsUInt16();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT32: {
+                            auto val1 = row1[col.idx].AsUInt32();
+                            auto val2 = row2[col.idx].AsUInt32();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT64: {
+                            auto val1 = row1[col.idx].AsUInt64();
+                            auto val2 = row2[col.idx].AsUInt64();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_CHAR: {
+                            auto val1 = row1[col.idx].AsInt8();
+                            auto val2 = row2[col.idx].AsInt8();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UCHAR: {
+                            auto val1 = row1[col.idx].AsUInt8();
+                            auto val2 = row2[col.idx].AsUInt8();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_FLOAT: {
+                            auto val1 = row1[col.idx].AsFloat();
+                            auto val2 = row2[col.idx].AsFloat();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_DOUBLE: {
+                            auto val1 = row1[col.idx].AsDouble();
+                            auto val2 = row2[col.idx].AsDouble();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_DATE: {
+                            auto val1 = row1[col.idx].AsString().str();
+                            auto val2 = row2[col.idx].AsString().str();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_STRING: {
+                            auto val1 = row1[col.idx].AsString().str();
+                            auto val2 = row2[col.idx].AsString().str();
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        // TODO: Throw error for other data types
+                }
+            }
+            return true;
+        };
+        std::sort(processed_rows.begin(), processed_rows.end(), custom_sort);
+    }
 
     // Return projection for all processed rows
     for(auto rec : processed_rows) {
