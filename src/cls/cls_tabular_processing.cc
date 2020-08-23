@@ -463,6 +463,97 @@ int processArrowCol(
     if(groupby_cols != "") groupby_arg = true;
     std::map<std::vector<string>, std::vector<uint32_t>> groupby_map;
 
+    /*
+    * Building map of key to rows for groupby
+    * Map looks like: (vector<string> key (for eg. {age, class}) : vector<int> rnums (for eg. {1, 3, 4, 5}))
+    * For example,
+    *       age | class |   
+    *     ------+-------
+    *        34 | Q     | 
+    *        12 | V     | 
+    *        34 | Q     | 
+    *        42 | W     | 
+    *       key       :   value
+    *    ===============================
+    *    (age, class) :   [row1,..., rown]
+    *    (34, Q)      :   [1, 3]
+    *    (12, V)      :   [2]
+    *    (42, W)      :   [4]    
+    */
+    
+    if (groupby_arg) {
+        Tables::schema_vec groupby_schema = schemaFromColNames(tbl_schema, groupby_cols);
+        for (auto i : result_rows) {
+            uint32_t rnum = i;
+            std::vector<string> key;
+
+            for (auto it = groupby_schema.begin(); it != groupby_schema.end() && !errcode; ++it) {
+                col_info col = *it;
+                auto builder = builder_list[std::distance(groupby_schema.begin(), it)];
+                auto processing_chunk = input_table->column(col.idx)->chunk(0);
+
+                // Append data from input tbale to the respective data type builders
+                switch(col.type) {
+                    case SDT_BOOL: {
+                        bool val = std::static_pointer_cast<arrow::BooleanArray>(processing_chunk)->Value(rnum);
+                        if(val) {
+                            key.push_back("true");
+                        } else {
+                            key.push_back("false");
+                        } 
+                        break;
+                    }  
+                    case SDT_INT8: 
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_INT16:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::Int16Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_INT32:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::Int32Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_INT64:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::Int64Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_UINT8:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_UINT16:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::UInt16Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_UINT32:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::UInt32Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_UINT64:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::UInt64Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_FLOAT:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::FloatArray>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_DOUBLE:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::DoubleArray>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_CHAR:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_UCHAR:
+                        key.push_back(std::to_string(std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rnum)));
+                        break;
+                    case SDT_DATE:
+                    case SDT_STRING:
+                        key.push_back(std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rnum));
+                        break;
+                    default: {
+                        errcode = TablesErrCodes::UnsupportedSkyDataType;
+                        errmsg.append("ERROR processArrow()");
+                        return errcode;
+                    }
+                }    
+            }
+            groupby_map[key].push_back(rnum);
+        } 
+    }
+
     std::vector<uint32_t> processed;
 
     // --groupby passed
