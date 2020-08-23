@@ -9,6 +9,7 @@
 */
 
 #include "cls_tabular_processing.h"
+#include <algorithm>
 
 
 namespace Tables {
@@ -592,6 +593,191 @@ int processArrowCol(
 
     bool orderby_arg = false;
     if(orderby_cols != "") orderby_arg = true;
+
+    // if orderby passed, then sort
+    if (orderby_arg) {
+        // ";SUPPKEY,ASC;ORDERKEY,DESC;"
+        boost::trim(orderby_cols);  // whitespace
+        boost::trim_if(orderby_cols, boost::is_any_of(PRED_DELIM_OUTER));
+
+        vector<std::string> orderby_items;
+        boost::split(orderby_items, orderby_cols, boost::is_any_of(PRED_DELIM_OUTER),
+                     boost::token_compress_on);
+        vector<std::string> orderby_descr;
+        
+        // store orderby (vector<col>, ASC/DESC)
+        vector<pair<schema_vec, std::string>> orderby_input;
+
+        for (auto it = orderby_items.begin(); it != orderby_items.end(); ++it) {
+            boost::split(orderby_descr, *it, boost::is_any_of(PRED_DELIM_INNER),
+                     boost::token_compress_on);
+            assert(orderby_descr.size() == 2);
+
+            std::string colname = orderby_descr.at(0);
+            std::string sort_type = orderby_descr.at(1);
+            boost::to_upper(colname);
+
+            schema_vec sv = schemaFromColNames(tbl_schema, colname);
+            if (sv.empty()) {
+                cerr << "Error: colname=" << colname << " not present in schema."
+                    << std::endl;
+                assert (TablesErrCodes::RequestedColNotPresent == 0);
+            }
+            orderby_input.push_back(make_pair(sv, sort_type));
+        }
+
+        // Validate input
+        for (auto arg : orderby_input) {
+            col_info col = arg.first[0];
+            std::string sort_by = arg.second;
+            // std::cout << col.name << " " << sort_by << "\n";
+            if(!(sort_by == "ASC" || sort_by == "DESC")) {
+                cerr << "Error: sorting by " << sort_by << " not supported. Use ASC/DESC."
+                    << std::endl;
+                assert (TablesErrCodes::OpNotRecognized == 0);
+            }
+        }
+
+        auto custom_sort = [orderby_input, input_table] (uint32_t &rec1, uint32_t &rec2) -> bool
+        {
+            for (auto arg : orderby_input) {
+                col_info col = arg.first[0];
+                std::string sort_by = arg.second;
+                auto processing_chunk = input_table->column(col.idx)->chunk(0);
+                switch(col.type) {  // encode data val into flexbuf
+                        case SDT_INT8:{
+                            auto val1 = std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }   
+                        case SDT_INT16: {
+                            auto val1 = std::static_pointer_cast<arrow::Int16Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::Int16Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_INT32: {
+                            auto val1 = std::static_pointer_cast<arrow::Int32Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::Int32Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_INT64: {
+                            auto val1 = std::static_pointer_cast<arrow::Int64Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::Int64Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT8: {
+                            auto val1 = std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT16: {
+                            auto val1 = std::static_pointer_cast<arrow::UInt16Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::UInt16Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT32: {
+                            auto val1 = std::static_pointer_cast<arrow::UInt32Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::UInt32Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UINT64: {
+                            auto val1 = std::static_pointer_cast<arrow::UInt64Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::UInt64Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_CHAR: {
+                            auto val1 = std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::Int8Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_UCHAR: {
+                            auto val1 = std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::UInt8Array>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_FLOAT: {
+                            auto val1 = std::static_pointer_cast<arrow::FloatArray>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::FloatArray>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_DOUBLE: {
+                            auto val1 = std::static_pointer_cast<arrow::DoubleArray>(processing_chunk)->Value(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::DoubleArray>(processing_chunk)->Value(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_DATE: {
+                            auto val1 = std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        case SDT_STRING: {
+                            auto val1 = std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rec1);
+                            auto val2 = std::static_pointer_cast<arrow::StringArray>(processing_chunk)->GetString(rec2);
+                            if (val1 == val2) 
+                                continue;
+                            else 
+                                return (sort_by == "ASC") ? (val1 < val2) : (val1 > val2);
+                            break;
+                        }
+                        // TODO: Throw error for other data types
+                }
+            }
+            return true;
+        };
+        std::sort(processed.begin(), processed.end(), custom_sort);
+    }
 
     // At this point we have rows which satisfied the required predicates.
     // Now create the output arrow table from input table.
