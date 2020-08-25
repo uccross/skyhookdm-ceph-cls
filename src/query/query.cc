@@ -65,6 +65,7 @@ std::string qop_groupby_cols;
 std::string qop_orderby_cols;
 std::string qop_index_preds;
 std::string qop_index2_preds;
+std::string qop_runstats_args;
 
 // build index op params for flatbufs
 bool idx_op_idx_unique;
@@ -386,7 +387,7 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     }
     std::string oid = target_objects.back();
     target_objects.pop_back();
-    std::cout << "computing stats...table: " << op.table_name << " oid: "
+    std::cout << "computing stats...table: " << op.runstats_args << " oid: "
               << oid << std::endl;
     work_lock.unlock();
 

@@ -1932,13 +1932,11 @@ int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         return -EINVAL;
     }
 
-    CLS_LOG(20, "exec_runstats_op: db_schema=%s", op.db_schema.c_str());
-    CLS_LOG(20, "exec_runstats_op: table_name=%s", op.table_name.c_str());
+    CLS_LOG(20, "exec_runstats_op: runstats_args=%s", op.runstats_args.c_str());
     CLS_LOG(20, "exec_runstats_op: data_schema=%s", op.data_schema.c_str());
 
     using namespace Tables;
-    std::string dbschema = op.db_schema;
-    std::string table_name = op.table_name;
+    std::string runstats_args = op.runstats_args;
     schema_vec data_schema = schemaFromString(op.data_schema);
 
     return 0;

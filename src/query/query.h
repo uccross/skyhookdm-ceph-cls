@@ -98,6 +98,7 @@ extern std::string qop_groupby_cols;
 extern std::string qop_orderby_cols;
 extern std::string qop_index_preds;
 extern std::string qop_index2_preds;
+extern std::string qop_runstats_args;
 
 extern bool idx_op_idx_unique;
 extern bool idx_op_ignore_stopwords;
