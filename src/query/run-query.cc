@@ -160,7 +160,7 @@ int main(int argc, char **argv)
     ("index-delims", po::value<std::string>(&text_index_delims)->default_value(""), "Use delim for text indexes (def=whitespace")
     ("index-ignore-stopwords", po::bool_switch(&text_index_ignore_stopwords)->default_value(false), "Ignore stopwords when building text index. (def=false)")
     ("index-plan-type", po::value<int>(&index_plan_type)->default_value(Tables::SIP_IDX_STANDARD), "If 2 indexes, for intersection plan use '2', for union plan use '3' (def='1')")
-    ("runstats", po::bool_switch(&runstats)->default_value(false), "Run statistics on the specified table name")
+    ("runstats", po::value<std::string>(&runstats)->default_value(""), "Run statistics on the specified table name")
     ("transform-format-type", po::value<std::string>(&trans_format_str)->default_value("SFT_FLATBUF_FLEX_ROW"), "Destination format type ")
     ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record metadata.")
     ("header", po::bool_switch(&header)->default_value(false), "Print row header (i.e., row schema")
@@ -360,7 +360,7 @@ int main(int argc, char **argv)
         assert (!index_cols.empty());
         assert (use_cls);
     }
-    if (runstats) {
+    if (runstats != "") {
         assert (use_cls);
     }
 
@@ -828,7 +828,7 @@ int main(int argc, char **argv)
 
   // for RUNSTATS job
   // launch run statistics on given table here.
-  if (query == "flatbuf" && runstats) {
+  if (query == "flatbuf" && runstats != "") {
 
     // create idx_op for workers
     stats_op op(qop_db_schema_name, qop_table_name, qop_data_schema);

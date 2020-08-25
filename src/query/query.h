@@ -119,7 +119,7 @@ extern std::string qop_file_name;
 extern std::string qop_tree_name;
 
 // other exec flags
-extern bool runstats;
+extern std::string runstats;
 extern std::string project_cols;
 
 // for debugging, prints full record header and metadata
