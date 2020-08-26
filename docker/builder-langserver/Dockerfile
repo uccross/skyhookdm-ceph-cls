@@ -10,7 +10,7 @@ RUN apt update && \
        curl clang clangd cmake ninja-build && \
     # install ceph libs \
     apt install -y --no-install-recommends \
-       ceph-osd ceph-mon libradospp-dev rados-objclass-dev && \
+       ceph-osd ceph-mon libradospp-dev rados-objclass-dev googletest && \
     # install arrow \
     curl -LO \
        https://apache.bintray.com/arrow/ubuntu/apache-arrow-archive-keyring-latest-focal.deb && \
