@@ -18,11 +18,13 @@ else()
   message(FATAL_ERROR "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support.")
 endif()
 
-find_package(librados)
-if(NOT ${LIBRADOS_FOUND})
-  message(FATAL_ERROR "Cannot find librados")
-endif()
+find_package(librados REQUIRED)
+include_directories(${LIBRADOS_INCLUDE_DIR})
 
 find_package(Arrow REQUIRED)
+include_directories(${ARROW_INCLUDE_DIR})
+
+find_package(GTest REQUIRED)
+include_directories(${GTEST_INCLUDE_DIRS})
 
 add_subdirectory(src)
