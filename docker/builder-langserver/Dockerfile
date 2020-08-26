@@ -2,7 +2,7 @@ FROM ubuntu:focal
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG ARROW_VERSION=1.0.0-1
+ARG ARROW_VERSION=1.0.1-1
 
 RUN apt update && \
     # install build tools \

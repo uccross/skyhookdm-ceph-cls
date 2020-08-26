@@ -7,5 +7,5 @@ RUN dnf group install -y 'Development Tools' && \
     dnf install -y cmake rados-objclass-devel && \
     dnf install -y ${ARROW_RPM_REPO_URL} && \
     dnf install -y --enablerepo=epel --enablerepo=PowerTools \
-       arrow-dataset-devel-1.0.0-1.el8 && \
+       arrow-dataset-devel-1.0.1-1.el8 && \
     dnf clean all
