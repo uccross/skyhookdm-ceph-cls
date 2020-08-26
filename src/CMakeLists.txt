@@ -6,5 +6,23 @@ set_target_properties(cls_sdk PROPERTIES
   VERSION "1.0.0"
   SOVERSION "1"
   INSTALL_RPATH ""
-  CXX_VISIBILITY_PRESET hidden)
+  CXX_VISIBILITY_PRESET hidden
+  )
+
 install(TARGETS cls_sdk DESTINATION ${cls_dir})
+
+# cls_sdk_test
+add_executable(cls_sdk_test
+  cls_sdk_test.cc
+  )
+
+target_link_libraries(cls_sdk_test
+  ${LIBRADOS_LIBRARIES}
+  ${GTEST_LIBS}
+  )
+
+install(TARGETS
+  cls_sdk_test
+  RUNTIME DESTINATION bin
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+  )
