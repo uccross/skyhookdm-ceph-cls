@@ -292,7 +292,6 @@ static inline int strtou64(const std::string value, uint64_t *out)
   try {
     v = boost::lexical_cast<uint64_t>(value);
   } catch (boost::bad_lexical_cast &) {
-    CLS_ERR("converting key into numeric value %s", value.c_str());
     return -EIO;
   }
 

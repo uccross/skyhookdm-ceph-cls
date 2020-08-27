@@ -430,6 +430,14 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
       exit(1);
     }
 
+    // Step-4 : Check number of buckets: should be int
+    uint64_t number_of_buckets;
+    err = Tables::strtou64(args[3], &number_of_buckets);
+    if (err != 0) {
+      cerr << "Error: Invalid number_of_buckets data type." << std::endl;
+      exit(1);
+    }
+
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
