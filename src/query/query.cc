@@ -389,6 +389,16 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     target_objects.pop_back();
     std::cout << "computing stats...table: " << op.runstats_args << " oid: "
               << oid << std::endl;
+              
+    // Validating input
+    // Step-1 : Check if runstats_args has 5 arguments (col, min, max, bucket, sampling)
+    std::string arguments = op.runstats_args; 
+    boost::trim(arguments);
+    vector<std::string> args;
+    boost::split(args, arguments, boost::is_any_of(","),
+                 boost::token_compress_on);
+    assert(args.size() == 5);
+
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
