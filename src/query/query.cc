@@ -389,7 +389,7 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     target_objects.pop_back();
     std::cout << "computing stats...table: " << op.runstats_args << " oid: "
               << oid << std::endl;
-              
+
     // Validating input
     // Step-1 : Check if runstats_args has 5 arguments (col, min, max, bucket, sampling)
     std::string arguments = op.runstats_args; 
@@ -398,6 +398,25 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     boost::split(args, arguments, boost::is_any_of(","),
                  boost::token_compress_on);
     assert(args.size() == 5);
+
+    // Step-2 : Check if the passed column is valid
+    std::string col = args[0];
+    std::string data_schema = op.data_schema;
+
+    boost::trim(col);
+    boost::trim(data_schema);
+
+    boost::to_upper(col);
+
+    assert (!data_schema.empty());
+
+    Tables::schema_vec table_schema = Tables::schemaFromString(data_schema);
+    Tables::schema_vec sv = schemaFromColNames(table_schema, col);
+    if (sv.empty()) {
+      cerr << "Error: colname=" << col << " not present in schema."
+            << std::endl;
+      assert (Tables::TablesErrCodes::RequestedColNotPresent == 0);
+    }
 
     work_lock.unlock();
 
