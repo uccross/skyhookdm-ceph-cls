@@ -418,6 +418,18 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
       assert (Tables::TablesErrCodes::RequestedColNotPresent == 0);
     }
 
+    // Step-3: Validate sampling argument: should be a float >= 0 && <= 1
+    float sampling;
+    int err = Tables::strtofloat(args[4], &sampling);
+    if (err != 0) {
+      cerr << "Error: Invalid sampling data type." << std::endl;
+      exit(1);
+    }
+    if (!(sampling >= 0 && sampling <= 1)) {
+      cerr << "Error: Invalid sampling value = " << sampling << " Should lie in range [0, 1]." << std::endl;
+      exit(1);
+    }
+
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;

@@ -300,6 +300,23 @@ static inline int strtou64(const std::string value, uint64_t *out)
   return 0;
 }
 
+/*
+ * Convert string into float value.
+ */
+static inline int strtofloat(const std::string value, float *out)
+{
+  float v;
+
+  try {
+    v = boost::lexical_cast<float>(value);
+  } catch (boost::bad_lexical_cast &) {
+    return -EIO;
+  }
+
+  *out = v;
+  return 0;
+}
+
 // contains the value of a predicate to be applied
 template <class T>
 class PredicateValue
