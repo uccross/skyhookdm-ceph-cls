@@ -356,10 +356,11 @@ struct transform_op {
   std::string table_name;
   std::string query_schema;
   int required_type;
+  bool do_compaction;
 
   transform_op() {}
-  transform_op(std::string tname, std::string qrscma, int req_type) :
-    table_name(tname), query_schema(qrscma), required_type(req_type) { }
+  transform_op(std::string tname, std::string qrscma, int req_type, bool compact) :
+    table_name(tname), query_schema(qrscma), required_type(req_type), do_compaction(compact) { }
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
@@ -367,6 +368,7 @@ struct transform_op {
     encode(table_name, bl);
     encode(query_schema, bl);
     encode(required_type, bl);
+    encode(do_compaction, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
@@ -375,6 +377,7 @@ struct transform_op {
     decode(table_name, bl);
     decode(query_schema, bl);
     decode(required_type, bl);
+    decode(do_compaction, bl);
   }
 
   std::string toString() {
@@ -383,6 +386,7 @@ struct transform_op {
     s.append(" .table_name=" + table_name);
     s.append(" .query_schema=" + query_schema);
     s.append(" .required_type=" + std::to_string(required_type));
+    s.append(" .do_compaction=" + std::to_string(do_compaction));
     return s;
   }
 };

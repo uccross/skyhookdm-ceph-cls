@@ -76,6 +76,7 @@ std::string idx_op_text_delims;
 
 // transform op params
 int trans_op_format_type;
+bool perform_compaction;
 
 // Example op params
 int expl_func_counter;

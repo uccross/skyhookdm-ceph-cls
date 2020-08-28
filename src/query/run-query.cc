@@ -38,6 +38,7 @@ int main(int argc, char **argv)
   bool mem_constrain;
   bool text_index_ignore_stopwords;
   bool lock_op;
+  bool do_compaction;
   int index_plan_type;
   int trans_format_type;
   std::string trans_format_str;
@@ -366,6 +367,7 @@ int main(int argc, char **argv)
 
     // set and validate the desired format types
     trans_format_type = sky_format_type_from_string(trans_format_str);
+    do_compaction = true;
     switch (trans_format_type) {
         case SFT_FLATBUF_FLEX_ROW:
         case SFT_ARROW:
@@ -705,6 +707,7 @@ int main(int argc, char **argv)
     idx_op_ignore_stopwords = text_index_ignore_stopwords;
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
+    perform_compaction = do_compaction;
 
     if (debug) {
         if (query == "flatbuf" || query == "fastpath") {
@@ -857,7 +860,7 @@ int main(int argc, char **argv)
   if (query == "flatbuf" && transform_db) {
 
     // create idx_op for workers
-    transform_op op(qop_table_name, qop_query_schema, trans_op_format_type);
+    transform_op op(qop_table_name, qop_query_schema, trans_op_format_type, perform_compaction);
 
     if (debug)
         cout << "DEBUG: transform op=" << op.toString() << endl;

@@ -108,6 +108,7 @@ extern std::string idx_op_text_delims;
 
 // Transform op params
 extern int trans_op_format_type;
+extern bool perform_compaction;
 
 // Example op params
 extern int expl_func_counter;
