@@ -393,6 +393,7 @@ int processArrowCol(
                 errmsg.append("ERROR processArrowCol(), input table columns length not the same");
                 return errcode;
 	    }
+	        // push back col data to chunked_arr_list for output table
             chunked_array_list.push_back(input_table->column(col.idx));
             // Add the details of column (Name and Datatype)
             switch(col.type) {
@@ -702,7 +703,7 @@ int processArrowCol(
     }
 
     // Copy values from input table rows to the output table rows
-    // the num of rows is 32 bit int, while the Arrow tables in c++ can hold 64 bit int rows,
+    // todo: the num of rows is 32 bit int, while the Arrow tables in c++ can hold 64 bit int rows,
     // Do we need to consider this limit in the future?
     for (uint32_t i = 0; i < nrows; i++) {
 
@@ -716,12 +717,15 @@ int processArrowCol(
         // The num of chunks and chunks sizes should be the same for every columns
         // can check this: https://github.com/apache/arrow/blob/master/cpp/src/arrow/table.cc#L280
         auto first_col_chunk_array = input_table->column(0);
-        // find the correct chunk and chunk index
+        // find the correct chunk and chunk index that contains this rnum
         // normally should be the same as 0, rnum
+        // todo: For this while loop, it would be clearer to keep track of first_row and last_row contained in
+        //  chunk, then test if this range contains rnum else chunk_idx++.
         while (curr_chunk < first_col_chunk_array->num_chunks() && cur_chunk_idx >= first_col_chunk_array->chunk(curr_chunk)->length()) {
           cur_chunk_idx -= first_col_chunk_array->chunk(curr_chunk)->length();
           curr_chunk++;
         }
+        // cur_chunk_idx is chunk_offset
         rnum = cur_chunk_idx;
 
         // skip dead rows.
