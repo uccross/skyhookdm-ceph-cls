@@ -506,6 +506,56 @@ public:
     }
 };
 
+template <class T>
+class LimitValue
+{
+public:
+    T val;
+    LimitValue(T v) : val(v) {};
+    LimitValue(const LimitValue& rhs);
+    LimitValue& operator=(const LimitValue& rhs);
+};
+
+template <typename T>
+class StatsArgument
+{
+private:
+	const std::string col_name;
+	LimitValue<T> min;
+	LimitValue<T> max;
+	const uint64_t buckets;
+	const float sampling;
+
+public:
+    StatsArgument(std::string col, const T& min_val, const T& max_val, uint64_t b, float s) :
+        col_name(col), min(min_val), max(max_val), buckets(b), sampling(s) {}
+
+    ~StatsArgument() { }
+    StatsArgument& getThis() {return *this;}
+    const StatsArgument& getThis() const {return *this;}
+    T MinVal() {return min.val;}
+    T MaxVal() {return max.val;}
+
+    std::string toString() {
+        std::string s("StatsArgument:\n");
+        s.append(" col_name=" + col_name + "\n");
+        s.append(" min=");
+        std::stringstream ss_min;
+        ss_min << this->MinVal();
+        s.append(ss_min.str());
+        s.append("\n");
+        s.append(" max=");
+        std::stringstream ss_max;
+        ss_max << this->MaxVal();
+        s.append(ss_max.str());
+        s.append("\n");
+        s.append(" buckets=" + std::to_string(buckets) + "\n");
+        s.append(" sampling=" + std::to_string(sampling) + "\n");
+        s.append("\n");
+        return s;
+    }
+};
+
 // col metadata used for the schema
 const int NUM_COL_INFO_FIELDS = 5;
 struct col_info {
