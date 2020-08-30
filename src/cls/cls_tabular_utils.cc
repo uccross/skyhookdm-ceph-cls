@@ -1995,52 +1995,15 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                             passed_rows.push_back(row_idx);
                     break;
                 }
+                // todo: implementations for SDT_JAGGEDARRAY and compareList()
                 case SDT_JAGGEDARRAY_BOOL:
-//                    TypedPredicate<bool>* p =                       \
-//                        dynamic_cast<TypedPredicate<bool>*>(*it);
-//                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
-//                    auto list_arr_values = std::static_pointer_cast<arrow::BooleanArray>(list_arr->values());
-//                    bool predval = p->Val();
-//                    if (compare(list_arr_values, row_idx, predval, p->opType()))
-//                        passed_rows.push_back(row_idx);
+
                     break;
                 case SDT_JAGGEDARRAY_CHAR:
-//                    TypedPredicate<char>* p=                        \
-//                        dynamic_cast<TypedPredicate<char>*>(*it);
-//                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
-//                    if (p->opType() == SOT_like) {
-//                        // use strings for regex
-//                        auto list_arr_values = std::static_pointer_cast<arrow::Int8Array>(list_arr->values());
-//                        std::string predval = std::to_string(p->Val());
-//                        if (compareList(list_arr_values, row_idx, predval, p->opType(), p->colType()))
-//                            passed_rows.push_back(row_idx);
-//                    }
-//                    else {
-//                        // use int val comparision method
-//                        auto list_arr_values = std::static_pointer_cast<arrow::Int8Array>(list_arr->values());
-//                        int8_t predval = p->Val();
-//                        if (compareList(list_arr_values, row_idx, static_cast<int64_t>(predval), p->opType()))
-//                            passed_rows.push_back(row_idx);
-//                    }
+
                     break;
                 case SDT_JAGGEDARRAY_UCHAR:
-//                    TypedPredicate<unsigned char>* p=                        \
-//                        dynamic_cast<TypedPredicate<unsigned char>*>(*it);
-//                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
-//                    if (p->opType() == SOT_like) {
-//                        // use strings for regex
-//                        auto list_arr_values = std::static_pointer_cast<arrow::UInt8Array>(list_arr->values());
-//                        std::string predval = std::to_string(p->Val());
-//                        if (compareList(list_arr_values, row_idx, predval, p->opType(), p->colType()))
-//                            passed_rows.push_back(row_idx);
-//                    }
-//                    else {
-//                        // use int val comparision method
-//                        auto list_arr_values = std::static_pointer_cast<arrow::UInt8Array>(list_arr->values());
-//                        uint8_t predval = p->Val();
-//                        if (compareList(list_arr_values, row_idx, static_cast<uint64_t>(predval), p->opType()))
-//                            passed_rows.push_back(row_idx);
-//                    }
+
                     break;
                 case SDT_JAGGEDARRAY_INT8: {
                     TypedPredicate<int8_t>* p =                       \
@@ -2358,18 +2321,7 @@ bool compare(const bool& val1, const bool& val2, const int& op) {
     return false;  // should be unreachable
 }
 
-//bool compareList(const std::shared_ptr<arrow::BooleanArray> list_arr_values,
-//        const int row_idx, const bool& val2, const int& op) {
-//    uint64_t start = list_arr->value_offset(row_idx);
-//    uint64_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
-//    // list op
-//    return false;
-//}
-//
-//bool compareList(const std::shared_ptr<arrow::Int8Array> list_arr_values,
-//         const int row_idx, const std::string& val2, const int& op, const int& data_type) {
-//    return false;
-//}
+// todo: more compareList()
 
 bool compareList(const std::vector<int64_t>& row_list_values, const int64_t& val2, const int& op) {
   if (row_list_values.size() == 0) return false;
