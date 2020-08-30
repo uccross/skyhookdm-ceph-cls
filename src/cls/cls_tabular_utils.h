@@ -669,9 +669,9 @@ typedef struct root_table sky_root;
 // skyhookdb row metadata and row data, wraps a row of data
 // abstracts a row from its underlying data format/layout
 struct rec_table {
-    const int64_t RID;
+    int64_t RID;
     nullbits_vector nullbits;
-    const row_data_ref data;  //flexbuffers::Reference
+    row_data_ref data;  //flexbuffers::Reference
     // const void* data_ref;
 
     rec_table(int64_t _RID, nullbits_vector _nullbits, row_data_ref _data) :
