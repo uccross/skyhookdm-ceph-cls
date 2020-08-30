@@ -517,7 +517,20 @@ public:
 };
 
 template <typename T>
-class StatsArgument
+class StatsBase
+{
+public:
+    virtual ~StatsBase() {}
+    virtual std::string colName() = 0;
+    virtual LimitValue<T> minLimit() = 0;
+    virtual LimitValue<T> maxLimit() = 0;
+    virtual uint64_t bucketCount() = 0;
+    virtual float samplingArg() = 0;
+    virtual std::string toString() = 0;
+};
+
+template <typename T>
+class StatsArgument : public StatsBase <T>
 {
 private:
 	const std::string col_name;
@@ -535,6 +548,11 @@ public:
     const StatsArgument& getThis() const {return *this;}
     T MinVal() {return min.val;}
     T MaxVal() {return max.val;}
+    virtual std::string colName() {return col_name;}
+    virtual LimitValue<T> minLimit() {return this->MinVal();}
+    virtual LimitValue<T> maxLimit() {return this->MaxVal();}
+    virtual uint64_t bucketCount() {return buckets;}
+    virtual float samplingArg() {return sampling;}
 
     std::string toString() {
         std::string s("StatsArgument:\n");

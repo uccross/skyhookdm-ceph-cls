@@ -320,8 +320,8 @@ struct stats_op {
   std::string data_schema;
 
   stats_op() {}
-  stats_op(std::string runstats_args, std::string dtscma) :
-           runstats_args(runstats_args), data_schema(dtscma) { }
+  stats_op(std::string _runstats_args, std::string _data_schema) :
+           runstats_args(_runstats_args), data_schema(_data_schema) { }
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
