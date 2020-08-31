@@ -98,6 +98,7 @@ extern std::string qop_groupby_cols;
 extern std::string qop_orderby_cols;
 extern std::string qop_index_preds;
 extern std::string qop_index2_preds;
+extern std::string qop_runstats_args;
 
 extern bool idx_op_idx_unique;
 extern bool idx_op_ignore_stopwords;
@@ -119,7 +120,7 @@ extern std::string qop_file_name;
 extern std::string qop_tree_name;
 
 // other exec flags
-extern bool runstats;
+extern std::string runstats;
 extern std::string project_cols;
 
 // for debugging, prints full record header and metadata
