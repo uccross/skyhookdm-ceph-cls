@@ -2393,16 +2393,6 @@ bool compareList(const std::vector<double>& row_list_values, const double& val2,
 }
 
 
-//bool compareList(const std::shared_ptr<arrow::UInt8Array> list_arr_values,
-//                 const int row_idx, const std::string& val2, const int& op, const int& data_type) {
-//    return false;
-//}
-//
-//bool compareList(const std::shared_ptr<arrow::UInt8Array> list_arr_values,
-//                 const int row_idx, const int64_t& val2, const int& op) {
-//    return false;
-//}
-
 // for our rocksdb entries, this creates the value portion by padding int
 // values and create a representative string.
 // Format of keys is like IDX_REC:*-LINEITEM:LINENUMBER-ORDERKEY:00000000000000000001-00000000000000000006
