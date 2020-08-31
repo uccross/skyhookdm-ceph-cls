@@ -2271,6 +2271,18 @@ int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
             delete fbmeta_builder;
         } 
     }  
+    
+    // TODO: Push the histogram into omap
+    // std::map<std::string, bufferlist> runstats_map;
+    // std::string key = "statistics";
+    // runstats_map[key] = bl;
+    // ret = cls_cxx_map_set_val(hctx, "statistics", &result_bl);
+    // if (ret < 0) {
+    //     CLS_LOG(20, "cls: exec_runstats_op: cls_cxx_map_set_vals failed for runstats_op");
+    // } else {
+    //     CLS_LOG(20, "cls: exec_runstats_op: cls_cxx_map_set_vals succeeded for runstats_op");
+    // }
+
     CLS_LOG(20, "stats_op.encoding result_bl size=%s", std::to_string(result_bl.length()).c_str());
     using ceph::encode;
     encode(result_bl, *out);
