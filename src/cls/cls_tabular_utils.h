@@ -82,7 +82,8 @@ enum TablesErrCodes {
     EINVALID_TRANSFORM_FORMAT,
     EDECODE_BUFFERLIST_FAILURE,
     ECLIENTSIDE_PROCESSING_FAILURE,
-    ESTORAGESIDE_PROCESSING_FAILURE
+    ESTORAGESIDE_PROCESSING_FAILURE,
+    EINVALID_COMPACTION_FORMAT
 };
 
 // skyhook data types, as supported by underlying data format
@@ -298,7 +299,23 @@ static inline int strtou64(const std::string value, uint64_t *out)
   try {
     v = boost::lexical_cast<uint64_t>(value);
   } catch (boost::bad_lexical_cast &) {
-    CLS_ERR("converting key into numeric value %s", value.c_str());
+    return -EIO;
+  }
+
+  *out = v;
+  return 0;
+}
+
+/*
+ * Convert string into float value.
+ */
+static inline int strtofloat(const std::string value, float *out)
+{
+  float v;
+
+  try {
+    v = boost::lexical_cast<float>(value);
+  } catch (boost::bad_lexical_cast &) {
     return -EIO;
   }
 
@@ -496,6 +513,74 @@ public:
     }
 };
 
+template <class T>
+class LimitValue
+{
+public:
+    T val;
+    LimitValue(T v) : val(v) {};
+    LimitValue(const LimitValue& rhs);
+    LimitValue& operator=(const LimitValue& rhs);
+};
+
+template <typename T>
+class StatsBase
+{
+public:
+    virtual ~StatsBase() {}
+    virtual std::string colName() = 0;
+    virtual LimitValue<T> minLimit() = 0;
+    virtual LimitValue<T> maxLimit() = 0;
+    virtual uint64_t bucketCount() = 0;
+    virtual float samplingArg() = 0;
+    virtual std::string toString() = 0;
+};
+
+template <typename T>
+class StatsArgument : public StatsBase <T>
+{
+private:
+	const std::string col_name;
+	LimitValue<T> min;
+	LimitValue<T> max;
+	const uint64_t buckets;
+	const float sampling;
+
+public:
+    StatsArgument(std::string col, const T& min_val, const T& max_val, uint64_t b, float s) :
+        col_name(col), min(min_val), max(max_val), buckets(b), sampling(s) {}
+
+    ~StatsArgument() { }
+    StatsArgument& getThis() {return *this;}
+    const StatsArgument& getThis() const {return *this;}
+    T MinVal() {return min.val;}
+    T MaxVal() {return max.val;}
+    virtual std::string colName() {return col_name;}
+    virtual LimitValue<T> minLimit() {return this->MinVal();}
+    virtual LimitValue<T> maxLimit() {return this->MaxVal();}
+    virtual uint64_t bucketCount() {return buckets;}
+    virtual float samplingArg() {return sampling;}
+
+    std::string toString() {
+        std::string s("StatsArgument:\n");
+        s.append(" col_name=" + col_name + "\n");
+        s.append(" min=");
+        std::stringstream ss_min;
+        ss_min << this->MinVal();
+        s.append(ss_min.str());
+        s.append("\n");
+        s.append(" max=");
+        std::stringstream ss_max;
+        ss_max << this->MaxVal();
+        s.append(ss_max.str());
+        s.append("\n");
+        s.append(" buckets=" + std::to_string(buckets) + "\n");
+        s.append(" sampling=" + std::to_string(sampling) + "\n");
+        s.append("\n");
+        return s;
+    }
+};
+
 // col metadata used for the schema
 const int NUM_COL_INFO_FIELDS = 5;
 struct col_info {
@@ -675,9 +760,9 @@ typedef struct root_table sky_root;
 // skyhookdb row metadata and row data, wraps a row of data
 // abstracts a row from its underlying data format/layout
 struct rec_table {
-    const int64_t RID;
+    int64_t RID;
     nullbits_vector nullbits;
-    const row_data_ref data;  //flexbuffers::Reference
+    row_data_ref data;  //flexbuffers::Reference
     // const void* data_ref;
 
     rec_table(int64_t _RID, nullbits_vector _nullbits, row_data_ref _data) :

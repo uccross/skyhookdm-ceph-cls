@@ -316,35 +316,31 @@ WRITE_CLASS_ENCODER(test_op)
 
 struct stats_op {
 
-  std::string db_schema;
-  std::string table_name;
+  std::string runstats_args;
   std::string data_schema;
 
   stats_op() {}
-  stats_op(std::string dbscma, std::string tname, std::string dtscma) :
-           db_schema(dbscma), table_name(tname), data_schema(dtscma) { }
+  stats_op(std::string _runstats_args, std::string _data_schema) :
+           runstats_args(_runstats_args), data_schema(_data_schema) { }
 
   // serialize the fields into bufferlist to be sent over the wire
   void encode(bufferlist& bl) const {
     using ceph::encode;
-    encode(db_schema, bl);
-    encode(table_name, bl);
+    encode(runstats_args, bl);
     encode(data_schema, bl);
   }
 
   // deserialize the fields from the bufferlist into this struct
   void decode(bufferlist::const_iterator &bl) {
     using ceph::decode;
-    decode(db_schema, bl);
-    decode(table_name, bl);
+    decode(runstats_args, bl);
     decode(data_schema, bl);
   }
 
   std::string toString() {
     std::string s;
     s.append("stats_op:");
-    s.append(" .db_schema=" + db_schema);
-    s.append(" .table_name=" + table_name);
+    s.append(" .runstats_args=" + runstats_args);
     s.append(" .data_schema=" + data_schema);
     return s;
   }
