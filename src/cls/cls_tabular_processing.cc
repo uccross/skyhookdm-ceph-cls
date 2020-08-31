@@ -1396,6 +1396,129 @@ int processSkyFbWASM(
     return errcode;
 }
 
+//template<typename T>
+int processStatsFb(
+        flatbuffers::FlatBufferBuilder& flatbldr,
+        schema_vec& data_schema,
+        Tables::StatsArgument<int32_t>* s, 
+        const char* dataptr,
+        const size_t datasz,
+        std::string& errmsg,
+        const std::vector<uint32_t>& row_nums) 
+{
+    sky_root root = getSkyRoot(dataptr, datasz, SFT_FLATBUF_FLEX_ROW);
+    uint32_t nrows = root.nrows;
+
+    // make a map with key as (lower_bound, upper_bound) and value as count
+    // eg, min = 1, max = 5, buckets = 3, width = 4/3
+    // [1, 7/3] [7/3, 11/3] [11/3, 5]
+    std::map<std::pair<float, float>, int> hist;
+
+    uint64_t buckets = s->bucketCount();
+    float min_value = s->MinVal();
+    float max_value = s->MaxVal();
+    float sampling = s->samplingArg();
+    int increment = 1 / sampling;
+
+    float width = (float)(max_value - min_value) / (float) (buckets);
+
+    // Histogram initialisation
+    for (uint32_t i = 0; i < buckets; ++i) {
+        hist[{min_value, min_value + width}] = 0;
+        min_value += width;
+    }
+
+    std::string col_name = s->colName();
+    Tables::schema_vec sv = schemaFromColNames(data_schema, col_name);
+    Tables::col_info column = sv[0];
+    int idx = column.idx;
+
+    // We skip rows by "increment" which denotes sampling
+    for (uint32_t i = 0; i < nrows; i += increment) {
+        sky_rec rec = getSkyRec(static_cast<row_offs>(root.data_vec)->Get(i));
+        auto row = rec.data.AsVector();
+        // get values for particular column
+        float val = row[idx].AsFloat();
+        // check the buckets and increment count
+        // [min_limit - delta, right)
+        // [.., max_limit + delta)
+        // TODO: look for alternate options
+        const float delta = 1e-5;
+        for (auto &it : hist) {
+            auto limits = it.first;
+             if (val > limits.first - delta && val < limits.second) {
+                ++it.second;
+                break;
+            }
+        }
+    }
+
+    sky_rec rec = getSkyRec(static_cast<row_offs>(root.data_vec)->Get(0));
+    delete_vector dead_rows;
+    std::vector<flatbuffers::Offset<Tables::Record>> offs;
+
+    // build return flatbuf
+    for (auto it : hist) {
+        flexbuffers::Builder *flexbldr = new flexbuffers::Builder();
+        flatbuffers::Offset<flatbuffers::Vector<unsigned char>> datavec;
+        flexbldr->Vector([&]() {
+            flexbldr->Add(it.first.first);  // lower limit
+            flexbldr->Add(it.first.second); // upper limit
+            flexbldr->Add(it.second);       // frequency              
+        });
+        flexbldr->Finish();
+
+        auto row_data = flatbldr.CreateVector(flexbldr->GetBuffer());
+        delete flexbldr;
+
+        auto nullbits = flatbldr.CreateVector(rec.nullbits);
+        flatbuffers::Offset<Tables::Record> row_off = \
+                Tables::CreateRecord(flatbldr, rec.RID, nullbits, row_data);
+
+        // Continue building the ROOT flatbuf's dead vector and rowOffsets vec
+        dead_rows.push_back(0);
+        offs.push_back(row_off);
+    }
+
+    Tables::schema_vec query_schema;
+    col_info min_limit(-1, SDT_FLOAT, true, false, "BUCKET_MIN");
+    col_info max_limit(-2, SDT_FLOAT, true, false, "BUCKET_MAX");
+    col_info count(-3, SDT_INT32, true, false, "COUNT");
+    query_schema.push_back(min_limit);
+    query_schema.push_back(max_limit);
+    query_schema.push_back(count);
+
+    // now build the return ROOT flatbuf wrapper
+    std::string query_schema_str;
+    for (auto it = query_schema.begin(); it != query_schema.end(); ++it) {
+        query_schema_str.append(it->toString() + "\n");
+    }
+
+    auto return_data_schema = flatbldr.CreateString(query_schema_str);
+    auto db_schema_name = flatbldr.CreateString(root.db_schema_name);
+    auto table_name = flatbldr.CreateString(root.table_name);
+    auto delete_v = flatbldr.CreateVector(dead_rows);
+    auto rows_v = flatbldr.CreateVector(offs);
+
+    auto table = CreateTable(
+        flatbldr,
+        root.data_format_type,
+        root.skyhook_version,
+        root.data_structure_version,
+        root.data_schema_version,
+        return_data_schema,
+        db_schema_name,
+        table_name,
+        delete_v,
+        rows_v,
+        offs.size());
+
+    // NOTE: the fb may be incomplete/empty, but must finish() else internal
+    // fb lib assert finished() fails, hence we must always return a valid fb
+    // and catch any ret error code upstream
+    flatbldr.Finish(table);
+    return 0;
+}
 
 }  // end namepace Tables
 

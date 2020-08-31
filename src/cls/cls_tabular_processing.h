@@ -80,6 +80,17 @@ int processSkyFbWASM(
         int* _row_nums,
         int _row_nums_size);
 
+// process flatbuffer format data blob, build histogram
+//template<typename T>
+int processStatsFb(
+        flatbuffers::FlatBufferBuilder& flatbldr,
+        schema_vec& data_schema,
+        Tables::StatsArgument<int32_t>* s,
+        const char* dataptr,
+        const size_t datasz,
+        std::string& errmsg,
+        const std::vector<uint32_t>& row_nums);
+
 } // end namespace Tables
 
 
