@@ -109,6 +109,7 @@ extern std::string idx_op_text_delims;
 
 // Transform op params
 extern int trans_op_format_type;
+extern bool perform_compaction;
 
 // Example op params
 extern int expl_func_counter;
@@ -163,6 +164,7 @@ extern bool stop;
 void worker_build_index(librados::IoCtx *ioctx);
 void worker_exec_build_sky_index_op(librados::IoCtx *ioctx, idx_op op);
 void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op);
+void worker_compact_arrow_tables_op(librados::IoCtx *ioctx);
 void worker_transform_db_op(librados::IoCtx *ioctx, transform_op op);
 void worker_exec_query_op();  // default worker task for exec_query_op
 void handle_cb(librados::completion_t cb, void *arg);
