@@ -132,6 +132,7 @@ int main(int argc, char **argv)
     ("direction", po::value<std::string>(&direction)->default_value("fwd"), "direction for cache warmup testing. choose one of: fwd, bwd, rnd")
     ("conf", po::value<std::string>(&conf)->default_value(""), "path to ceph.conf")
     ("transform-db", po::bool_switch(&transform_db)->default_value(false), "transform DB")
+    ("compact-table", po::bool_switch(&do_compaction)->default_value(false), "compact Arrow tables")
     // query parameters (old)
     ("extended-price", po::value<double>(&extended_price)->default_value(0.0), "extended price")
     ("order-key", po::value<int>(&order_key)->default_value(0.0), "order key")
@@ -367,7 +368,6 @@ int main(int argc, char **argv)
 
     // set and validate the desired format types
     trans_format_type = sky_format_type_from_string(trans_format_str);
-    do_compaction = true;
     switch (trans_format_type) {
         case SFT_FLATBUF_FLEX_ROW:
         case SFT_ARROW:
@@ -855,12 +855,38 @@ int main(int argc, char **argv)
     return 0;
   }
 
+  // for COMPACT ARROW TABLES job
+  // launch transform operation here.
+  if (query == "flatbuf" && do_compaction) {
+
+    // create idx_op for workers
+    bool op = perform_compaction;
+
+    if (debug)
+        cout << "DEBUG: do_compaction=" << op << endl;
+
+    // kick off the workers
+    std::vector<std::thread> threads;
+    for (int i = 0; i < wthreads; i++) {
+      auto ioctx = new librados::IoCtx;
+      int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
+      checkret(ret, 0);
+      threads.push_back(std::thread(worker_compact_arrow_tables_op, ioctx));
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    return 0;
+  }
+
   // for TRANSFORM OBJECT FORMAT job
   // launch transform operation here.
   if (query == "flatbuf" && transform_db) {
 
     // create idx_op for workers
-    transform_op op(qop_table_name, qop_query_schema, trans_op_format_type, perform_compaction);
+    transform_op op(qop_table_name, qop_query_schema, trans_op_format_type);
 
     if (debug)
         cout << "DEBUG: transform op=" << op.toString() << endl;

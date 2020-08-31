@@ -350,6 +350,30 @@ void worker_exec_build_sky_index_op(librados::IoCtx *ioctx, idx_op op)
   ioctx->close();
 }
 
+void worker_compact_arrow_tables_op(librados::IoCtx *ioctx)
+{
+  while (true) {
+    work_lock.lock();
+    if (target_objects.empty()) {
+      work_lock.unlock();
+      break;
+    }
+    std::string oid = target_objects.back();
+    target_objects.pop_back();
+    work_lock.unlock();
+
+    ceph::bufferlist inbl, outbl;
+
+    if (debug)
+        cout << "DEBUG: query.cc: worker_compact_arrow_tables_op: launching exec for oid=" << oid << endl;
+
+    int ret = ioctx->exec(oid, "tabular", "compact_arrow_tables_op",
+                          inbl, outbl);
+    checkret(ret, 0);
+  }
+  ioctx->close();
+}
+
 void worker_transform_db_op(librados::IoCtx *ioctx, transform_op op)
 {
   while (true) {
