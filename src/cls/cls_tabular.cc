@@ -33,6 +33,7 @@ cls_method_handle_t h_wasm_query_op;
 cls_method_handle_t h_exec_runstats_op;
 cls_method_handle_t h_build_index;
 cls_method_handle_t h_exec_build_sky_index_op;
+cls_method_handle_t h_compact_arrow_tables_op;
 cls_method_handle_t h_transform_db_op;
 cls_method_handle_t h_freelockobj_query_op;
 cls_method_handle_t h_inittable_group_obj_query_op;
@@ -1944,6 +1945,111 @@ int exec_runstats_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
     return 0;
 }
 
+/*
+ * Function: compact_arrow_tables_op
+ * Description: Method to compact Arrow tables.
+ * @param[in] hctx    : CLS method context
+ * @param[out] in     : input bufferlist
+ * @param[out] out    : output bufferlist
+ * Return Value: error code
+*/
+static
+int compact_arrow_tables_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
+{
+    // Object is sequence of actual data along with encoded metadata
+    bufferlist encoded_meta_bls;
+
+    // TODO: get individual off/len of fbmeta's inside obj and read one at a time.
+    int ret = cls_cxx_read(hctx, 0, 0, &encoded_meta_bls);
+
+    if (ret < 0) {
+        CLS_ERR("ERROR: compact_arrow_tables_op: reading obj. %d", ret);
+        return ret;
+    }
+
+    // if encoded_meta_bls size is zero, then we skip compaction attempt and return success
+    if (encoded_meta_bls.length() == 0) {
+        CLS_LOG(20, "compact_arrow_tables_op: encoded_meta_bls is empty");
+        return 0;
+    }
+
+    using namespace Tables;
+    ceph::bufferlist::const_iterator it = encoded_meta_bls.begin();
+
+    // result compacted table and bufferlist
+    std::shared_ptr<arrow::Table> compacted_table;
+    std::vector<std::shared_ptr<arrow::Table>> tables;
+    bufferlist compacted_encoded_meta_bl;
+    while (it.get_remaining() > 0) {
+        bufferlist bl;
+        try {
+            using ceph::decode;
+            decode(bl, it);  // unpack the next bl
+        } catch (const buffer::error &err) {
+            CLS_ERR("ERROR: decoding object format from BL");
+            return -EINVAL;
+        }
+
+        // default usage here assumes the fbmeta is already in the bl
+        sky_meta meta = getSkyMeta(&bl);
+        std::string errmsg;
+
+        if (meta.blob_format != SFT_ARROW) {
+            CLS_ERR("ERROR: Invalid data format=%s, expected Arrow", std::to_string(meta.blob_format).c_str());
+            return -EINVALID_COMPACTION_FORMAT;
+        }
+
+        if (!meta.blob_deleted) {
+            // obtaining arrow table from blob data
+            std::shared_ptr<arrow::Table> table;
+            std::shared_ptr<arrow::Buffer> buffer = \
+                arrow::MutableBuffer::Wrap(reinterpret_cast<uint8_t*>(const_cast<char*>(meta.blob_data)), meta.blob_size);
+            extract_arrow_from_buffer(&table, buffer);
+
+            // pushing arrow tables into a vector for further concatenation
+            tables.push_back(table); 
+
+            // concatenate all arrow tables in the vector
+            arrow::Result<std::shared_ptr<arrow::Table>> result = arrow::ConcatenateTables(tables);
+            if (result.ok()) {
+                compacted_table = std::move(result).ValueOrDie();
+            } else {
+                CLS_ERR("ERROR: arrow::ConcatenateTables returned bad result\n");
+            }
+        }       
+    }
+
+    std::shared_ptr<arrow::Buffer> buffer;
+    convert_arrow_to_buffer(compacted_table, &buffer);
+
+    // CREATE An FB_META, start with an empty builder first
+    flatbuffers::FlatBufferBuilder *meta_builder =  \
+        new flatbuffers::FlatBufferBuilder();
+
+    createFbMeta(meta_builder,
+                 SFT_ARROW,
+                 reinterpret_cast<unsigned char*>(buffer->mutable_data()),
+                 buffer->size());
+
+    // Add meta_builder's data into a bufferlist as char*
+    bufferlist meta_bl;
+    meta_bl.append(reinterpret_cast<const char*>(
+                    meta_builder->GetBufferPointer()),
+                    meta_builder->GetSize());
+    using ceph::encode;
+    encode(meta_bl, compacted_encoded_meta_bl);
+    delete meta_builder;
+
+    // Write the object back to Ceph. cls_cxx_replace truncates the original
+    // object and writes full object.
+    ret = cls_cxx_replace(hctx, 0, compacted_encoded_meta_bl.length(),
+                            &compacted_encoded_meta_bl);
+    if (ret < 0) {
+        CLS_ERR("ERROR: compact_arrow_tables_op: cls_cxx_replace: writing obj full %d", ret);
+        return ret;
+    }
+    return 0;
+}
 
 /*
  * Function: transform_db_op
@@ -2459,6 +2565,9 @@ void __cls_init()
 
   cls_register_cxx_method(h_class, "exec_build_sky_index_op",
       CLS_METHOD_RD | CLS_METHOD_WR, exec_build_sky_index_op, &h_exec_build_sky_index_op);
+
+  cls_register_cxx_method(h_class, "compact_arrow_tables_op",
+      CLS_METHOD_RD | CLS_METHOD_WR, compact_arrow_tables_op, &h_compact_arrow_tables_op);
 
   cls_register_cxx_method(h_class, "transform_db_op",
       CLS_METHOD_RD | CLS_METHOD_WR, transform_db_op, &h_transform_db_op);

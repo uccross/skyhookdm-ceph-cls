@@ -38,6 +38,7 @@ int main(int argc, char **argv)
   bool mem_constrain;
   bool text_index_ignore_stopwords;
   bool lock_op;
+  bool do_compaction;
   int index_plan_type;
   int trans_format_type;
   std::string trans_format_str;
@@ -131,6 +132,7 @@ int main(int argc, char **argv)
     ("direction", po::value<std::string>(&direction)->default_value("fwd"), "direction for cache warmup testing. choose one of: fwd, bwd, rnd")
     ("conf", po::value<std::string>(&conf)->default_value(""), "path to ceph.conf")
     ("transform-db", po::bool_switch(&transform_db)->default_value(false), "transform DB")
+    ("compact-table", po::bool_switch(&do_compaction)->default_value(false), "compact Arrow tables")
     // query parameters (old)
     ("extended-price", po::value<double>(&extended_price)->default_value(0.0), "extended price")
     ("order-key", po::value<int>(&order_key)->default_value(0.0), "order key")
@@ -705,6 +707,7 @@ int main(int argc, char **argv)
     idx_op_ignore_stopwords = text_index_ignore_stopwords;
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
+    perform_compaction = do_compaction;
 
     if (debug) {
         if (query == "flatbuf" || query == "fastpath") {
@@ -843,6 +846,32 @@ int main(int argc, char **argv)
       int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
       checkret(ret, 0);
       threads.push_back(std::thread(worker_exec_runstats_op, ioctx, op));
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    return 0;
+  }
+
+  // for COMPACT ARROW TABLES job
+  // launch transform operation here.
+  if (query == "flatbuf" && do_compaction) {
+
+    // create idx_op for workers
+    bool op = perform_compaction;
+
+    if (debug)
+        cout << "DEBUG: do_compaction=" << op << endl;
+
+    // kick off the workers
+    std::vector<std::thread> threads;
+    for (int i = 0; i < wthreads; i++) {
+      auto ioctx = new librados::IoCtx;
+      int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
+      checkret(ret, 0);
+      threads.push_back(std::thread(worker_compact_arrow_tables_op, ioctx));
     }
 
     for (auto& thread : threads) {
