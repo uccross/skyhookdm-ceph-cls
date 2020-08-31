@@ -98,6 +98,7 @@ extern std::string qop_groupby_cols;
 extern std::string qop_orderby_cols;
 extern std::string qop_index_preds;
 extern std::string qop_index2_preds;
+extern std::string qop_runstats_args;
 
 extern bool idx_op_idx_unique;
 extern bool idx_op_ignore_stopwords;
@@ -108,6 +109,7 @@ extern std::string idx_op_text_delims;
 
 // Transform op params
 extern int trans_op_format_type;
+extern bool perform_compaction;
 
 // Example op params
 extern int expl_func_counter;
@@ -119,7 +121,7 @@ extern std::string qop_file_name;
 extern std::string qop_tree_name;
 
 // other exec flags
-extern bool runstats;
+extern std::string runstats;
 extern std::string project_cols;
 extern bool pushdown_cols_only;
 
@@ -165,6 +167,7 @@ extern bool stop;
 void worker_build_index(librados::IoCtx *ioctx);
 void worker_exec_build_sky_index_op(librados::IoCtx *ioctx, idx_op op);
 void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op);
+void worker_compact_arrow_tables_op(librados::IoCtx *ioctx);
 void worker_transform_db_op(librados::IoCtx *ioctx, transform_op op);
 void worker_exec_query_op();  // default worker task for exec_query_op
 void handle_cb(librados::completion_t cb, void *arg);

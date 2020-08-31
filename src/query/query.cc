@@ -65,6 +65,7 @@ std::string qop_groupby_cols;
 std::string qop_orderby_cols;
 std::string qop_index_preds;
 std::string qop_index2_preds;
+std::string qop_runstats_args;
 
 // build index op params for flatbufs
 bool idx_op_idx_unique;
@@ -76,6 +77,7 @@ std::string idx_op_text_delims;
 
 // transform op params
 int trans_op_format_type;
+bool perform_compaction;
 
 // Example op params
 int expl_func_counter;
@@ -87,7 +89,7 @@ std::string qop_file_name;
 std::string qop_tree_name;
 
 // other exec flags
-bool runstats;
+std::string runstats;
 std::string project_cols;
 bool pushdown_cols_only;
 
@@ -352,6 +354,30 @@ void worker_exec_build_sky_index_op(librados::IoCtx *ioctx, idx_op op)
   ioctx->close();
 }
 
+void worker_compact_arrow_tables_op(librados::IoCtx *ioctx)
+{
+  while (true) {
+    work_lock.lock();
+    if (target_objects.empty()) {
+      work_lock.unlock();
+      break;
+    }
+    std::string oid = target_objects.back();
+    target_objects.pop_back();
+    work_lock.unlock();
+
+    ceph::bufferlist inbl, outbl;
+
+    if (debug)
+        cout << "DEBUG: query.cc: worker_compact_arrow_tables_op: launching exec for oid=" << oid << endl;
+
+    int ret = ioctx->exec(oid, "tabular", "compact_arrow_tables_op",
+                          inbl, outbl);
+    checkret(ret, 0);
+  }
+  ioctx->close();
+}
+
 void worker_transform_db_op(librados::IoCtx *ioctx, transform_op op)
 {
   while (true) {
@@ -389,8 +415,59 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     }
     std::string oid = target_objects.back();
     target_objects.pop_back();
-    std::cout << "computing stats...table: " << op.table_name << " oid: "
+    std::cout << "computing stats...table: " << op.runstats_args << " oid: "
               << oid << std::endl;
+
+    // Validating input
+    // Step-1 : Check if runstats_args has 5 arguments (col, min, max, bucket, sampling)
+    std::string arguments = op.runstats_args; 
+    boost::trim(arguments);
+    vector<std::string> args;
+    boost::split(args, arguments, boost::is_any_of(","),
+                 boost::token_compress_on);
+    assert(args.size() == 5);
+
+    // Step-2 : Check if the passed column is valid
+    std::string col = args[0];
+    std::string data_schema = op.data_schema;
+
+    boost::trim(col);
+    boost::trim(data_schema);
+
+    boost::to_upper(col);
+
+    assert (!data_schema.empty());
+
+    Tables::schema_vec table_schema = Tables::schemaFromString(data_schema);
+    Tables::schema_vec sv = schemaFromColNames(table_schema, col);
+    if (sv.empty()) {
+      cerr << "Error: colname=" << col << " not present in schema."
+            << std::endl;
+      assert (Tables::TablesErrCodes::RequestedColNotPresent == 0);
+    }
+
+    // Step-3: Validate sampling argument: should be a float > 0 && <= 1
+    float sampling;
+    int err = Tables::strtofloat(args[4], &sampling);
+    if (err != 0) {
+      cerr << "Error: Invalid sampling data type." << std::endl;
+      exit(1);
+    }
+    if (!(sampling >= 0 && sampling <= 1)) {
+      cerr << "Error: Invalid sampling value = " << sampling << " Should lie in range (0, 1]." << std::endl;
+      exit(1);
+    }
+
+    // Step-4 : Check number of buckets: should be int
+    uint64_t number_of_buckets;
+    err = Tables::strtou64(args[3], &number_of_buckets);
+    if (err != 0) {
+      cerr << "Error: Invalid number_of_buckets data type." << std::endl;
+      exit(1);
+    }
+
+    // bucket_min | bucket_max | count | dead_count | star_representation
+
     work_lock.unlock();
 
     ceph::bufferlist inbl, outbl;
@@ -398,6 +475,27 @@ void worker_exec_runstats_op(librados::IoCtx *ioctx, stats_op op)
     encode(op, inbl);
     int ret = ioctx->exec(oid, "tabular", "exec_runstats_op", inbl, outbl);
     checkret(ret, 0);
+
+    ceph::bufferlist result;
+    if (outbl.length() >0) {
+      ceph::bufferlist::const_iterator it = outbl.begin();
+      try {
+        using ceph::decode;
+        decode(result, it);  // unpack the result data bufferlist
+      }
+      catch (ceph::buffer::error&) {
+        std::cerr << "DEBUG: query.cc: exec_stats_op: failed to decode result data into a bufferlist" << std::endl;
+        assert(Tables::TablesErrCodes::EDECODE_BUFFERLIST_FAILURE==0);
+      }
+      if (debug) {
+        cout << "DEBUG: query.cc: exec_stats_op: decoded result.length()=" << result.length() << endl;
+      }
+    }
+    using namespace Tables;
+    sky_meta fbmeta = getSkyMeta(&result);
+    print_data(fbmeta.blob_data,
+              fbmeta.blob_size,
+              fbmeta.blob_format);
   }
   ioctx->close();
 }

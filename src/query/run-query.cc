@@ -38,6 +38,7 @@ int main(int argc, char **argv)
   bool mem_constrain;
   bool text_index_ignore_stopwords;
   bool lock_op;
+  bool do_compaction;
   int index_plan_type;
   int trans_format_type;
   std::string trans_format_str;
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
   std::string orderby_cols;
   std::string index_preds;
   std::string index2_preds;
+  std::string runstats_args;
   std::string index_cols;
   std::string index2_cols;
   bool lock_obj_free;
@@ -131,6 +133,7 @@ int main(int argc, char **argv)
     ("direction", po::value<std::string>(&direction)->default_value("fwd"), "direction for cache warmup testing. choose one of: fwd, bwd, rnd")
     ("conf", po::value<std::string>(&conf)->default_value(""), "path to ceph.conf")
     ("transform-db", po::bool_switch(&transform_db)->default_value(false), "transform DB")
+    ("compact-table", po::bool_switch(&do_compaction)->default_value(false), "compact Arrow tables")
     // query parameters (old)
     ("extended-price", po::value<double>(&extended_price)->default_value(0.0), "extended price")
     ("order-key", po::value<int>(&order_key)->default_value(0.0), "order key")
@@ -160,7 +163,7 @@ int main(int argc, char **argv)
     ("index-delims", po::value<std::string>(&text_index_delims)->default_value(""), "Use delim for text indexes (def=whitespace")
     ("index-ignore-stopwords", po::bool_switch(&text_index_ignore_stopwords)->default_value(false), "Ignore stopwords when building text index. (def=false)")
     ("index-plan-type", po::value<int>(&index_plan_type)->default_value(Tables::SIP_IDX_STANDARD), "If 2 indexes, for intersection plan use '2', for union plan use '3' (def='1')")
-    ("runstats", po::bool_switch(&runstats)->default_value(false), "Run statistics on the specified table name")
+    ("runstats", po::value<std::string>(&runstats_args)->default_value(""), "Run statistics on the specified table name")
     ("transform-format-type", po::value<std::string>(&trans_format_str)->default_value("SFT_FLATBUF_FLEX_ROW"), "Destination format type ")
     ("verbose", po::bool_switch(&print_verbose)->default_value(false), "Print detailed record metadata.")
     ("header", po::bool_switch(&header)->default_value(false), "Print row header (i.e., row schema")
@@ -361,7 +364,7 @@ int main(int argc, char **argv)
         assert (!index_cols.empty());
         assert (use_cls);
     }
-    if (runstats) {
+    if (runstats_args != "") {
         assert (use_cls);
     }
 
@@ -748,6 +751,7 @@ int main(int argc, char **argv)
     idx_op_ignore_stopwords = text_index_ignore_stopwords;
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
+    perform_compaction = do_compaction;
 
     // if only push down columns, set qop_query_schema to be all related columns
     // set query preds vec to be empty, we only push down project
@@ -878,10 +882,11 @@ int main(int argc, char **argv)
 
   // for RUNSTATS job
   // launch run statistics on given table here.
-  if (query == "flatbuf" && runstats) {
+  if (query == "flatbuf" && runstats_args != "") {
 
     // create idx_op for workers
-    stats_op op(qop_db_schema_name, qop_table_name, qop_data_schema);
+    qop_runstats_args = runstats_args;
+    stats_op op(qop_runstats_args, qop_data_schema);
 
     if (debug)
         cout << "DEBUG: stats op=" << op.toString() << endl;
@@ -893,6 +898,32 @@ int main(int argc, char **argv)
       int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
       checkret(ret, 0);
       threads.push_back(std::thread(worker_exec_runstats_op, ioctx, op));
+    }
+
+    for (auto& thread : threads) {
+      thread.join();
+    }
+
+    return 0;
+  }
+
+  // for COMPACT ARROW TABLES job
+  // launch transform operation here.
+  if (query == "flatbuf" && do_compaction) {
+
+    // create idx_op for workers
+    bool op = perform_compaction;
+
+    if (debug)
+        cout << "DEBUG: do_compaction=" << op << endl;
+
+    // kick off the workers
+    std::vector<std::thread> threads;
+    for (int i = 0; i < wthreads; i++) {
+      auto ioctx = new librados::IoCtx;
+      int ret = cluster.ioctx_create(pool.c_str(), *ioctx);
+      checkret(ret, 0);
+      threads.push_back(std::thread(worker_compact_arrow_tables_op, ioctx));
     }
 
     for (auto& thread : threads) {
