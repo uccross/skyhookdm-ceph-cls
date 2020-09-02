@@ -18,7 +18,7 @@ add_executable(cls_sdk_test
 
 target_link_libraries(cls_sdk_test
   ${LIBRADOS_LIBRARIES}
-  ${GTEST_LIBS}
+  ${GTEST_MAIN_LIBRARIES}
   )
 
 install(TARGETS
