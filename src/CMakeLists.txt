@@ -14,11 +14,14 @@ install(TARGETS cls_sdk DESTINATION ${cls_dir})
 # cls_sdk_test
 add_executable(cls_sdk_test
   cls_sdk_test.cc
+  test_utils.cc
   )
 
 target_link_libraries(cls_sdk_test
   ${LIBRADOS_LIBRARIES}
   ${GTEST_MAIN_LIBRARIES}
+  ${GTEST_INCLUDE_DIRS}	
+  ${GTEST_LIBRARIES}
   )
 
 install(TARGETS
