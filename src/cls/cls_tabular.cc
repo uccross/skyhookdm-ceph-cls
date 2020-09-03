@@ -939,65 +939,21 @@ read_sky_index(
 }
 
 /*
- * Primary method to process queries
+ * Indexing lookups
  */
 static
-int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
-{
-    int ret = 0;
-
-    // accounting.
-    uint64_t read_start = 0;
-    uint64_t read_ns = 0;
-    uint64_t eval_start = 0;
-    uint64_t eval_ns = 0;
-
-    // result set to be returned to client.
-    bufferlist result_bl;
-
-    // contains the serialized user request.
-    query_op op;
-
-    // extract the query op to get the query request params
-    try {
-        bufferlist::const_iterator it = in->begin();
-        using ceph::decode;
-        decode(op, it);
-    } catch (const buffer::error &err) {
-        CLS_ERR("ERROR: exec_query_op: decoding query op failed");
-        return -EINVAL;
-    }
-
-    // remove newlines for cls logging purpose
-    std::string msg = op.toString();
-    std::replace(msg.begin(), msg.end(), '\n', ' ');
-
-    if (op.debug) {
-        CLS_LOG(20, "exec_query_op decoded successfully");
-        CLS_LOG(20, "exec_query_op op.toString()=%s", op.toString().c_str());
-    }
-
+int indexing_lookup(cls_method_context_t hctx, std::map<int, struct Tables::read_info>& reads, query_op& op, 
+	Tables::schema_vec& data_schema, Tables::predicate_vec& query_preds) {
     using namespace Tables;
+    int ret = 0;
 
     // hold result of index lookups or read all flatbufs
     bool index1_exists = false;
     bool index2_exists = false;
     bool use_index1 = false;
     bool use_index2 = false;
-    std::map<int, struct read_info> reads;
     std::map<int, struct read_info> idx1_reads;
     std::map<int, struct read_info> idx2_reads;
-
-    // data_schema is the table's current schema
-    // TODO: redundant, this is also stored in the fb, extract from fb?
-    schema_vec data_schema = schemaFromString(op.data_schema);
-
-    // query_schema is the query schema
-    schema_vec query_schema = schemaFromString(op.query_schema);
-
-    // predicates to be applied, if any
-    predicate_vec query_preds = predsFromString(data_schema,
-                                                op.query_preds);
 
     /* INDEXING LOOKUPS */
     //
@@ -1179,25 +1135,25 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
                                     case SIP_IDX_INTERSECTION: {
                                         auto it = std::set_intersection(
-                                                        rnums1.begin(),
-                                                        rnums1.end(),
-                                                        rnums2.begin(),
-                                                        rnums2.end(),
-                                                        result_rnums.begin());
+                                                rnums1.begin(),
+                                                rnums1.end(),
+                                                rnums2.begin(),
+                                                rnums2.end(),
+                                                result_rnums.begin());
                                         result_rnums.resize(it -
-                                                        result_rnums.begin());
+                                                            result_rnums.begin());
                                         break;
                                     }
 
                                     case SIP_IDX_UNION: {
                                         auto it = std::set_union(
-                                                        rnums1.begin(),
-                                                        rnums1.end(),
-                                                        rnums2.begin(),
-                                                        rnums2.end(),
-                                                        result_rnums.begin());
+                                                rnums1.begin(),
+                                                rnums1.end(),
+                                                rnums2.begin(),
+                                                rnums2.end(),
+                                                result_rnums.begin());
                                         result_rnums.resize(it -
-                                                        result_rnums.begin());
+                                                            result_rnums.begin());
                                         break;
                                     }
 
@@ -1209,10 +1165,10 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
                                 if (!result_rnums.empty()) {
 
                                     reads[fbnum] = Tables::read_info(
-                                                            ri1.fb_seq_num,
-                                                            ri1.off,
-                                                            ri1.len,
-                                                            result_rnums);
+                                            ri1.fb_seq_num,
+                                            ri1.off,
+                                            ri1.len,
+                                            result_rnums);
                                 }
                             } // end if (it2 != idx2_reads.end())
                         } // end for (auto it1 = idx1_reads.begin();
@@ -1228,8 +1184,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         } // end if (index1_exists && use_index1)
     } // end if (op.index_read)
 
-
-    /*
+        /*
      * At this point we either used an index or not, act accordingly:
      *
      * if we did use an index, then either we already
@@ -1254,7 +1209,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         // predicates can be applied during the data scan operator
         if (!use_index1) {
             if (!index_preds.empty()) {
-                    query_preds.insert(
+                query_preds.insert(
                         query_preds.end(),
                         std::make_move_iterator(index_preds.begin()),
                         std::make_move_iterator(index_preds.end()));
@@ -1263,7 +1218,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
 
         if (!use_index2) {
             if (!index2_preds.empty()) {
-                    query_preds.insert(
+                query_preds.insert(
                         query_preds.end(),
                         std::make_move_iterator(index2_preds.begin()),
                         std::make_move_iterator(index2_preds.end()));
@@ -1289,7 +1244,7 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
         if (op.mem_constrain) {
 
             // try to set the reads[] with the fb sequence
-            int ret = read_fbs_index(hctx, key_fb_prefix, reads);
+            ret = read_fbs_index(hctx, key_fb_prefix, reads);
 
             if (reads.empty())
                 CLS_LOG(20,"exec_query_op: WARN: No FBs index entries found.");
@@ -1311,7 +1266,69 @@ int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
             reads[fb_seq_num] = ri;
         }
     }
+    return ret;
+}
 
+/*
+ * Primary method to process queries
+ */
+static
+int exec_query_op(cls_method_context_t hctx, bufferlist *in, bufferlist *out)
+{
+    int ret = 0;
+
+    // accounting.
+    uint64_t read_start = 0;
+    uint64_t read_ns = 0;
+    uint64_t eval_start = 0;
+    uint64_t eval_ns = 0;
+
+    // result set to be returned to client.
+    bufferlist result_bl;
+
+    // contains the serialized user request.
+    query_op op;
+
+    // extract the query op to get the query request params
+    try {
+        bufferlist::const_iterator it = in->begin();
+        using ceph::decode;
+        decode(op, it);
+    } catch (const buffer::error &err) {
+        CLS_ERR("ERROR: exec_query_op: decoding query op failed");
+        return -EINVAL;
+    }
+
+    // remove newlines for cls logging purpose
+    std::string msg = op.toString();
+    std::replace(msg.begin(), msg.end(), '\n', ' ');
+
+    if (op.debug) {
+        CLS_LOG(20, "exec_query_op decoded successfully");
+        CLS_LOG(20, "exec_query_op op.toString()=%s", op.toString().c_str());
+    }
+
+    using namespace Tables;
+
+    std::map<int, struct read_info> reads;
+
+    // data_schema is the table's current schema
+    // TODO: redundant, this is also stored in the fb, extract from fb?
+    schema_vec data_schema = schemaFromString(op.data_schema);
+
+    // query_schema is the query schema
+    schema_vec query_schema = schemaFromString(op.query_schema);
+
+    // predicates to be applied, if any
+    predicate_vec query_preds = predsFromString(data_schema,
+                                                op.query_preds);
+
+    // indexing lookup, output to reads
+    ret = indexing_lookup(hctx, reads, op, data_schema, query_preds);
+    if (ret < 0) {
+        return ret;
+    }
+    
     // now we can decode and process each bl in the obj
     // loop over a list of reads() that may have come from an index lookup
     // or if no index lookup, then a single read with off=0 and len=0 to

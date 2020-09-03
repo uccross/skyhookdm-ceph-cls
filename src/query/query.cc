@@ -91,6 +91,7 @@ std::string qop_tree_name;
 // other exec flags
 std::string runstats;
 std::string project_cols;
+bool pushdown_cols_only;
 
 // prints full record header and metadata
 bool print_verbose;
@@ -106,6 +107,8 @@ Tables::schema_vec sky_idx2_schema;
 Tables::predicate_vec sky_qry_preds;
 Tables::predicate_vec sky_idx_preds;
 Tables::predicate_vec sky_idx2_preds;
+
+Tables::schema_vec sky_pushdown_cols_qry_schema;
 
  // these are all intialized in run-query
 std::atomic<unsigned> result_count;
@@ -693,6 +696,10 @@ void worker_exec_query_op()
                 more_processing = true;
             }
         }
+	// if pushdown cols only, and there are preds left to process here
+        if (use_cls && pushdown_cols_only && sky_qry_preds.size() > 0) {
+            more_processing = true;
+        }
 
         // nothing left to do here, so we just print results
         if (!more_processing) {
@@ -740,10 +747,50 @@ void worker_exec_query_op()
                     cout << "DEBUG: query.cc: worker:  case SFT_FLATBUF_FLEX_ROW." << endl;
 
                 flatbuffers::FlatBufferBuilder flatbldr(1024); // pre-alloc
-                int ret = processSkyFb(flatbldr,
-                                       sky_tbl_schema,
-                                       sky_qry_schema,
-                                       sky_qry_preds,
+                
+		// new qry_schema and tbl_schema for processing
+		// the col_idx in the schema should reindex starting from 0
+		Tables::schema_vec sky_process_qry_schema;
+		Tables::schema_vec sky_process_tbl_schema;
+		
+                int col_idx = 0;
+		// process_qry_schema is just the same as the required qry columns,
+		// we only need to reset col_idx
+                for (auto it_scm = sky_qry_schema.begin(); it_scm != sky_qry_schema.end(); ++it_scm) {
+                    const struct col_info ci(col_idx, (*it_scm).type,
+                                             (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
+                    sky_process_qry_schema.push_back(ci);
+                    col_idx++;
+                }
+                col_idx = 0;
+		// the tbl_schema is only those columns in qry-schema and preds vec
+		// we can just use the pushdown_cols_qry_schema in run-query.cc
+		// also, reset the col_idx
+                for (auto it_scm = sky_pushdown_cols_qry_schema.begin(); it_scm != sky_pushdown_cols_qry_schema.end(); ++it_scm) {
+                    const struct col_info ci(col_idx, (*it_scm).type,
+                                             (*it_scm).is_key, (*it_scm).nullable, (*it_scm).name);
+                    sky_process_tbl_schema.push_back(ci);
+                    col_idx++;
+                }
+		
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: sky_process_tbl_schema= " << endl
+			     << schemaToString(sky_process_tbl_schema) << endl;
+			cout << "DEBUG: query.cc: worker: sky_process_qry_schema= " << endl
+			     << schemaToString(sky_process_qry_schema) << endl;
+		}
+		// reconstruct the preds vector using the new tbl_schema
+		Tables::predicate_vec sky_process_qry_preds;
+		sky_process_qry_preds = predsFromString(sky_process_tbl_schema, predsToString(sky_qry_preds, sky_tbl_schema));
+		
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: sky_process_qry_preds: "
+			     << predsToString(sky_process_qry_preds, sky_process_tbl_schema) << endl;
+		}
+		int ret = processSkyFb(flatbldr,
+                                       sky_process_tbl_schema,
+                                       sky_process_qry_schema,
+                                       sky_process_qry_preds,
                                        qop_groupby_cols,
                                        qop_orderby_cols,
                                        fbmeta.blob_data,
@@ -761,6 +808,10 @@ void worker_exec_query_op()
                     reinterpret_cast<const char*>(flatbldr.GetBufferPointer());
                 sky_root root = getSkyRoot(processed_data, 0);
                 result_count += root.nrows;
+		if (debug) {
+			cout << "DEBUG: query.cc: worker: result count: " << result_count << endl;
+			cout << "DEBUG: query.cc: worker: flatbldr size: " << flatbldr.GetSize() << endl;
+		}    
                 print_data(processed_data, 0, SFT_FLATBUF_FLEX_ROW);
                 break;
             }

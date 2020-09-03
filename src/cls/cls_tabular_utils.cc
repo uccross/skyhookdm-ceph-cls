@@ -1776,7 +1776,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
 // used by processArrow column-wise methods only
 // returns true if the record passes all of the predicates (and/or)
 void applyPredicatesArrowCol(predicate_vec& pv,
-                             std::shared_ptr<arrow::Array> col_array,
+                             std::shared_ptr<arrow::ChunkedArray> col_chunk_array,
                              int col_idx, std::vector<uint32_t>& row_nums)
 {
     std::vector<uint32_t> input_rows = row_nums;
@@ -1787,7 +1787,8 @@ void applyPredicatesArrowCol(predicate_vec& pv,
 
     if (row_nums.empty()) {
         // Considering each columns have same number of rows
-        nrows = col_array->length();
+        // total length of chunnked  array
+        nrows = col_chunk_array->length();
     }
     else {
         nrows = row_nums.size();
@@ -1807,6 +1808,18 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                 row_idx = i;
             else
                 row_idx = row_nums[i];
+
+            // First, we need to use the row_idx to find which chunks it lies in
+            // and the specific position in this chunk
+            int cur_chunk_idx = row_idx;
+            int curr_chunk = 0;
+            while (curr_chunk < col_chunk_array->num_chunks() && cur_chunk_idx >= col_chunk_array->chunk(curr_chunk)->length()) {
+              cur_chunk_idx -= col_chunk_array->chunk(curr_chunk)->length();
+              curr_chunk++;
+            }
+            // col_array is the current chunk, row_idx is the index in this chunk
+            std::shared_ptr<arrow::Array> col_array = col_chunk_array->chunk(curr_chunk);
+            row_idx = cur_chunk_idx;
 
             switch((*it)->colType()) {
 
@@ -1982,6 +1995,183 @@ void applyPredicatesArrowCol(predicate_vec& pv,
                             passed_rows.push_back(row_idx);
                     break;
                 }
+                // todo: implementations for SDT_JAGGEDARRAY and compareList()
+                case SDT_JAGGEDARRAY_BOOL:
+
+                    break;
+                case SDT_JAGGEDARRAY_CHAR:
+
+                    break;
+                case SDT_JAGGEDARRAY_UCHAR:
+
+                    break;
+                case SDT_JAGGEDARRAY_INT8: {
+                    TypedPredicate<int8_t>* p =                       \
+                        dynamic_cast<TypedPredicate<int8_t>*>(*it);
+                    int8_t predval = p->Val();
+
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::Int8Array>(list_arr->values());
+
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<int64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                      row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
+                      passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_INT16: {
+                    TypedPredicate<int16_t>* p =                       \
+                        dynamic_cast<TypedPredicate<int16_t>*>(*it);
+                    int16_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::Int16Array>(list_arr->values());
+
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<int64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                      row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
+                      passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_INT32: {
+                    TypedPredicate<int32_t>* p =                       \
+                        dynamic_cast<TypedPredicate<int32_t>*>(*it);
+                    int32_t predval = p->Val();
+
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::Int32Array>(list_arr->values());
+
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<int64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                      row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_INT64: {
+                    TypedPredicate<int64_t>* p =                       \
+                        dynamic_cast<TypedPredicate<int64_t>*>(*it);
+                    int64_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::Int64Array>(list_arr->values());
+
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<int64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                      row_list_values.push_back(static_cast<int64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<int64_t>(predval), p->opType()))
+                      passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_UINT8: {
+                    TypedPredicate<uint8_t>* p =                       \
+                        dynamic_cast<TypedPredicate<uint8_t>*>(*it);
+                    uint8_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::UInt8Array>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<uint64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_UNT16: {
+                    TypedPredicate<uint16_t>* p =                       \
+                        dynamic_cast<TypedPredicate<uint16_t>*>(*it);
+                    uint16_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::UInt16Array>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<uint64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_UINT32: {
+                    TypedPredicate<uint32_t>* p =                       \
+                        dynamic_cast<TypedPredicate<uint32_t>*>(*it);
+                    uint32_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::UInt32Array>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<uint64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(static_cast<uint64_t>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<uint64_t>(predval), p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_UINT64: {
+                    TypedPredicate<uint64_t>* p =                       \
+                        dynamic_cast<TypedPredicate<uint64_t>*>(*it);
+                    uint64_t predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::UInt64Array>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<uint64_t> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(list_arr_values->Value(i));
+                    }
+                    if (compareList(row_list_values, predval, p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_FLOAT: {
+                    TypedPredicate<float>* p =                      \
+                        dynamic_cast<TypedPredicate<float>*>(*it);
+                    float predval = p->Val();
+
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::FloatArray>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<double> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(static_cast<double>(list_arr_values->Value(i)));
+                    }
+                    if (compareList(row_list_values, static_cast<double>(predval), p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
+                case SDT_JAGGEDARRAY_DOUBLE: {
+                    TypedPredicate<double>* p =                     \
+                        dynamic_cast<TypedPredicate<double>*>(*it);
+                    double predval = p->Val();
+                    auto list_arr = std::static_pointer_cast<arrow::ListArray>(col_array);
+                    auto list_arr_values = std::static_pointer_cast<arrow::DoubleArray>(list_arr->values());
+                    int32_t start = list_arr->value_offset(row_idx);
+                    int32_t end = list_arr->value_offset(row_idx) + list_arr->value_length(row_idx);
+                    std::vector<double> row_list_values;
+                    for (int32_t i = start; i < end; i++) {
+                        row_list_values.push_back(list_arr_values->Value(i));
+                    }
+                    if (compareList(row_list_values, predval, p->opType()))
+                        passed_rows.push_back(row_idx);
+                    break;
+		}
                 default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
             }
         }
@@ -2130,6 +2320,78 @@ bool compare(const bool& val1, const bool& val2, const int& op) {
     }
     return false;  // should be unreachable
 }
+
+// todo: more compareList()
+
+bool compareList(const std::vector<int64_t>& row_list_values, const int64_t& val2, const int& op) {
+  if (row_list_values.size() == 0) return false;
+  int64_t max_val = *(row_list_values.begin());
+  int64_t min_val = *(row_list_values.begin());
+  for (auto it = row_list_values.begin(); it != row_list_values.end(); it++) {
+    int64_t val = *it;
+    max_val = val > max_val ? val : max_val;
+    min_val = val < max_val ? val : min_val;
+  }
+  switch (op) {
+      case SOT_max_lt:
+        return max_val < val2;
+      case SOT_max_leq:
+        return max_val <= val2;
+      case SOT_min_gt:
+        return min_val > val2;
+      case SOT_min_geq:
+        return min_val >= val2;
+      default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
+  }
+  return false;
+}
+
+bool compareList(const std::vector<uint64_t>& row_list_values, const uint64_t& val2, const int& op) {
+    if (row_list_values.size() == 0) return false;
+    uint64_t max_val = *(row_list_values.begin());
+    uint64_t min_val = *(row_list_values.begin());
+    for (auto it = row_list_values.begin(); it != row_list_values.end(); it++) {
+        uint64_t val = *it;
+        max_val = val > max_val ? val : max_val;
+        min_val = val < max_val ? val : min_val;
+    }
+    switch (op) {
+        case SOT_max_lt:
+            return max_val < val2;
+        case SOT_max_leq:
+            return max_val <= val2;
+        case SOT_min_gt:
+            return min_val > val2;
+        case SOT_min_geq:
+            return min_val >= val2;
+        default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
+    }
+    return false;
+}
+
+bool compareList(const std::vector<double>& row_list_values, const double& val2, const int& op) {
+    if (row_list_values.size() == 0) return false;
+    double max_val = *(row_list_values.begin());
+    double min_val = *(row_list_values.begin());
+    for (auto it = row_list_values.begin(); it != row_list_values.end(); it++) {
+        double val = *it;
+        max_val = val > max_val ? val : max_val;
+        min_val = val < max_val ? val : min_val;
+    }
+    switch (op) {
+        case SOT_max_lt:
+            return max_val < val2;
+        case SOT_max_leq:
+            return max_val <= val2;
+        case SOT_min_gt:
+            return min_val > val2;
+        case SOT_min_geq:
+            return min_val >= val2;
+        default: assert (TablesErrCodes::PredicateComparisonNotDefined==0);
+    }
+    return false;
+}
+
 
 // for our rocksdb entries, this creates the value portion by padding int
 // values and create a representative string.
@@ -2452,6 +2714,8 @@ int extract_arrow_from_buffer(std::shared_ptr<arrow::Table>* table, const std::s
         *table = arrow::Table::Make(schema, array_list);
     }
     else {
+        //https://github.com/apache/arrow/blob/master/cpp/src/arrow/table.cc#L280
+        // The num_chunks in each columns of the result table is decided by batch_vec size().
         arrow::Result<std::shared_ptr<arrow::Table>> result = arrow::Table::FromRecordBatches(batch_vec);
         if (result.ok()) {
             *table = std::move(result).ValueOrDie();

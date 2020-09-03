@@ -621,6 +621,142 @@ int processArrowCol(
             col_idx_max = it->idx;
     }
 
+    // preds and row_nums are empty, we copy the entire columns to output table
+    if (preds.empty() && row_nums.empty()) {
+        std::vector<std::shared_ptr<arrow::ChunkedArray>> chunked_array_list;
+
+        // Iterate through query schema vector to get the details of columns i.e name and type.
+        for (auto it = query_schema.begin(); it != query_schema.end() && !errcode; ++it) {
+            col_info col = *it;
+	    std::shared_ptr<arrow::ChunkedArray> cur_col = input_table->column(col.idx);
+	    if (chunked_array_list.size() > 0 && chunked_array_list[0]->length() != cur_col->length()) {
+	    	errcode = TablesErrCodes::ArrowStatusErr;
+                errmsg.append("ERROR processArrowCol(), input table columns length not the same");
+                return errcode;
+	    }
+	        // push back col data to chunked_arr_list for output table
+            chunked_array_list.push_back(input_table->column(col.idx));
+            // Add the details of column (Name and Datatype)
+            switch(col.type) {
+                case SDT_BOOL: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::boolean()));
+                    break;
+                }
+                case SDT_INT8: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
+                    break;
+                }
+                case SDT_INT16: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int16()));
+                    break;
+                }
+                case SDT_INT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int32()));
+                    break;
+                }
+                case SDT_INT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int64()));
+                    break;
+                }
+                case SDT_UINT8: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
+                    break;
+                }
+                case SDT_UINT16: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint16()));
+                    break;
+                }
+                case SDT_UINT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint32()));
+                    break;
+                }
+                case SDT_UINT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint64()));
+                    break;
+                }
+                case SDT_FLOAT: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float32()));
+                    break;
+                }
+                case SDT_DOUBLE: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::float64()));
+                    break;
+                }
+                case SDT_CHAR: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::int8()));
+                    break;
+                }
+                case SDT_UCHAR: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::uint8()));
+                    break;
+                }
+                case SDT_DATE:
+                case SDT_STRING: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::utf8()));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_BOOL: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::boolean())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_INT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_UINT32: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_INT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::int64())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_UINT64: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::uint64())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_FLOAT: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float32())));
+                    break;
+                }
+                case SDT_JAGGEDARRAY_DOUBLE: {
+                    output_tbl_fields_vec.push_back(arrow::field(col.name, arrow::list(arrow::float64())));
+                    break;
+                }
+                default: {
+                    errcode = TablesErrCodes::UnsupportedSkyDataType;
+                    errmsg.append("ERROR processArrowCol()");
+                    return errcode;
+                }
+            }
+        }
+        // Add skyhook metadata to arrow metadata.
+        std::shared_ptr<arrow::KeyValueMetadata> output_tbl_metadata (new arrow::KeyValueMetadata);
+        output_tbl_metadata->Append(ToString(METADATA_SKYHOOK_VERSION),
+                                    metadata->value(METADATA_SKYHOOK_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA_VERSION),
+                                    metadata->value(METADATA_DATA_SCHEMA_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_STRUCTURE_VERSION),
+                                    metadata->value(METADATA_DATA_STRUCTURE_VERSION));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_FORMAT_TYPE),
+                                    metadata->value(METADATA_DATA_FORMAT_TYPE));
+        output_tbl_metadata->Append(ToString(METADATA_DATA_SCHEMA),
+                                    schemaToString(query_schema));
+        output_tbl_metadata->Append(ToString(METADATA_DB_SCHEMA),
+                                    metadata->value(METADATA_DB_SCHEMA));
+        output_tbl_metadata->Append(ToString(METADATA_TABLE_NAME),
+                                    metadata->value(METADATA_TABLE_NAME));
+        output_tbl_metadata->Append(ToString(METADATA_NUM_ROWS),
+                                    std::to_string(nrows));
+
+        // Generate schema from schema vector and add the metadata
+        schema = std::make_shared<arrow::Schema>(output_tbl_fields_vec, output_tbl_metadata);
+
+        // Finally, create a arrow table from schema and array vector
+        *table = arrow::Table::Make(schema, chunked_array_list);
+
+        return errcode;
+    }
     // segregate predicates as agg and non_agg
     predicate_vec agg_preds;
     predicate_vec non_agg_preds;
@@ -629,16 +765,16 @@ int processArrowCol(
         if(p->isGlobalAgg()) agg_preds.push_back(p);
         else non_agg_preds.push_back(p);
     }
-
+  
     // Apply predicates to all the columns and get the rows which
     // satifies the condition
     if (!preds.empty()) {
         // Iterate through each column in print the data inside it
         for (auto it = tbl_schema.begin(); it != tbl_schema.end(); ++it) {
             col_info col = *it;
-
+            // There could be multiple chunks in one columns's chunkedArray
             applyPredicatesArrowCol(non_agg_preds,
-                                    input_table->column(col.idx)->chunk(0),
+                                    input_table->column(col.idx),
                                     col.idx,
                                     result_rows);
         }
@@ -1134,6 +1270,8 @@ int processArrowCol(
     }
 
     // Copy values from input table rows to the output table rows
+    // todo: the num of rows is 32 bit int, while the Arrow tables in c++ can hold 64 bit int rows,
+    // Do we need to consider this limit in the future?
     nrows = processed.size();
     for (uint32_t i = 0; i < nrows; i++) {
 
@@ -1141,8 +1279,25 @@ int processArrowCol(
         if (!preds.empty())
             rnum = processed[i];
 
+        // Use the rnum to find which chunks it lies in and the specific position in this chunk
+        int cur_chunk_idx = rnum;
+        int curr_chunk = 0;
+        // The num of chunks and chunks sizes should be the same for every columns
+        // can check this: https://github.com/apache/arrow/blob/master/cpp/src/arrow/table.cc#L280
+        auto first_col_chunk_array = input_table->column(0);
+        // find the correct chunk and chunk index that contains this rnum
+        // normally should be the same as 0, rnum
+        // todo: For this while loop, it would be clearer to keep track of first_row and last_row contained in
+        //  chunk, then test if this range contains rnum else chunk_idx++.
+        while (curr_chunk < first_col_chunk_array->num_chunks() && cur_chunk_idx >= first_col_chunk_array->chunk(curr_chunk)->length()) {
+          cur_chunk_idx -= first_col_chunk_array->chunk(curr_chunk)->length();
+          curr_chunk++;
+        }
+        // cur_chunk_idx is chunk_offset
+        rnum = cur_chunk_idx;
+
         // skip dead rows.
-        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(0);
+        auto delvec_chunk = input_table->column(ARROW_DELVEC_INDEX(num_cols))->chunk(curr_chunk);
         if (std::static_pointer_cast<arrow::BooleanArray>(delvec_chunk)->Value(rnum) == true) continue;
 
         processed_rows++;
@@ -1153,7 +1308,7 @@ int processArrowCol(
             col_info col = *it;
             auto builder = builder_list[std::distance(query_schema.begin(), it)];
 
-            auto processing_chunk = input_table->column(col.idx)->chunk(0);
+            auto processing_chunk = input_table->column(col.idx)->chunk(curr_chunk);
 
             if (col.idx < AGG_COL_LAST or col.idx > col_idx_max) {
                 errcode = TablesErrCodes::RequestedColIndexOOB;

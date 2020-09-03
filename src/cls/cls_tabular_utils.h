@@ -168,6 +168,12 @@ enum SkyOpType {
     SOT_bitwise_or,
     SOT_FIRST = SOT_lt,
     SOT_LAST = SOT_bitwise_or,
+    // LIST PREDICATE OPERATIONS
+    SOT_max_lt,
+    SOT_max_leq,
+    SOT_min_gt,
+    SOT_min_geq,
+
 };
 
 enum SkyIdxType
@@ -975,7 +981,7 @@ bool applyPredicatesArrow(predicate_vec& pv, std::shared_ptr<arrow::Table>& tabl
                           int element_index);
 
 void applyPredicatesArrowCol(predicate_vec& pv,
-                             std::shared_ptr<arrow::Array> col_array,
+                             std::shared_ptr<arrow::ChunkedArray> col_chunk_array,
                              int col_idx, std::vector<uint32_t>& row_nums);
 
 inline
@@ -992,6 +998,16 @@ bool compare(const bool& val1, const bool& val2, const int& op);
 
 inline  // used for date types or regex on alphanumeric types
 bool compare(const std::string& val1, const std::string& val2, const int& op, const int& data_type);
+
+// used for Arrow::ListType Boolean
+inline
+bool compareList(const std::vector<int64_t>& row_list_values, const int64_t& val2, const int& op);
+
+inline
+bool compareList(const std::vector<uint64_t>& row_list_values, const uint64_t& val2, const int& op);
+
+inline
+bool compareList(const std::vector<double>& row_list_values, const double& val2, const int& op);
 
 template <typename T>
 T computeAgg(const T& val, const T& oldval, const int& op) {

@@ -123,6 +123,7 @@ extern std::string qop_tree_name;
 // other exec flags
 extern std::string runstats;
 extern std::string project_cols;
+extern bool pushdown_cols_only;
 
 // for debugging, prints full record header and metadata
 extern bool print_verbose;
@@ -138,6 +139,8 @@ extern Tables::schema_vec sky_idx2_schema;
 extern Tables::predicate_vec sky_qry_preds;
 extern Tables::predicate_vec sky_idx_preds;
 extern Tables::predicate_vec sky_idx2_preds;
+
+extern Tables::schema_vec sky_pushdown_cols_qry_schema;
 
 extern std::atomic<unsigned> result_count;
 extern std::atomic<unsigned> rows_returned;

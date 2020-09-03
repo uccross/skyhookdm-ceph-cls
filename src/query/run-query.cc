@@ -181,6 +181,7 @@ int main(int argc, char **argv)
     ("lock-obj-acquire", po::bool_switch(&lock_obj_acquire)->default_value(false), "Get table values")
     ("lock-obj-create", po::bool_switch(&lock_obj_create)->default_value(false), "Create Lock obj")
     ("client-format", po::value<std::string>(&client_format_str)->default_value("SFT_ANY"), "Data format type to return to client (def=SFT_ANY)")
+    ("pushdown-cols-only", po::bool_switch(&pushdown_cols_only)->default_value(false), "Only pushdown cols")
  ;
 
   po::options_description all_opts("Allowed options");
@@ -416,6 +417,9 @@ int main(int argc, char **argv)
     sky_idx_preds = predsFromString(sky_tbl_schema, index_preds);
     sky_idx2_preds = predsFromString(sky_tbl_schema, index2_preds);
 
+    if (pushdown_cols_only == true) {
+      assert(use_cls == true);
+    }
     // validate incoming query
     if (groupby_cols != "" || hasAggPreds(sky_qry_preds)) {
         schema_vec projection = schemaFromColNames(sky_tbl_schema, project_cols);
@@ -452,6 +456,7 @@ int main(int argc, char **argv)
                     << "either in aggregated function or GROUP BY argument" << std::endl;
           exit(1);
         }
+
     }
 
     // verify and set the query schema, check for select *
@@ -459,13 +464,13 @@ int main(int argc, char **argv)
         for(auto it=sky_tbl_schema.begin(); it!=sky_tbl_schema.end(); ++it) {
             col_info ci(*it);  // deep copy
             sky_qry_schema.push_back(ci);
-        }
 
-        // if project all cols and there are no selection preds, set fastpath
-        if (sky_qry_preds.size() == 0 and
-            sky_idx_preds.size() == 0 and
-            sky_idx2_preds.size() == 0) {
+            // if project all cols and there are no selection preds, set fastpath
+            if (sky_qry_preds.size() == 0 and
+                sky_idx_preds.size() == 0 and
+                sky_idx2_preds.size() == 0) {
                 fastpath = true;
+            }
         }
     } else {
         // push final columns in sky_qry_schema
@@ -540,6 +545,44 @@ int main(int argc, char **argv)
               sky_qry_schema.push_back(col);
             }
           }
+        }
+        // if we only push down columns (project all related columns, let preds be empty)
+        if (pushdown_cols_only) {
+            // copy the original columns from sky_qry_schema to sky_pushdown_cols_qry_schema
+            for (auto it_ci = sky_qry_schema.begin(); it_ci != sky_qry_schema.end(); ++it_ci) {
+                col_info ci(*it_ci);
+                sky_pushdown_cols_qry_schema.push_back(ci);
+            }
+            // then we add new columns from preds, if not exist
+            for (auto it = sky_qry_preds.begin(); it != sky_qry_preds.end(); ++it) {
+                PredicateBase* p = *it;
+                int col_idx = p->colIdx();
+                bool pre_col_existed = false;
+                for (auto it_col = sky_pushdown_cols_qry_schema.begin();
+                     it_col != sky_pushdown_cols_qry_schema.end(); ++it_col) {
+                    if ((*it_col).idx == col_idx) {
+                        pre_col_existed = true;
+                    }
+                }
+                if (pre_col_existed) continue;
+
+                int col_type = p->colType();
+                bool cur_is_key = false;
+                bool cur_nullable = false;
+                std::string cur_col_name =  "";
+                for (auto it_sch = sky_tbl_schema.begin(); it_sch != sky_tbl_schema.end(); ++it_sch) {
+                    col_info ci = *it_sch;
+                    // if col indexes match then build the value string.
+                    if (col_idx == ci.idx) {
+                        cur_is_key = ci.is_key;
+                        cur_nullable = ci.nullable;
+                        cur_col_name = ci.name;
+                        break;
+                    }
+                }
+                const struct col_info ci(col_idx, col_type, cur_is_key, cur_nullable, cur_col_name);
+                sky_pushdown_cols_qry_schema.push_back(ci);
+            }
         }
     }
 
@@ -709,6 +752,13 @@ int main(int argc, char **argv)
     idx_op_text_delims = text_index_delims;
     trans_op_format_type = trans_format_type;
     perform_compaction = do_compaction;
+
+    // if only push down columns, set qop_query_schema to be all related columns
+    // set query preds vec to be empty, we only push down project
+    if (pushdown_cols_only) {
+        qop_query_schema = schemaToString(sky_pushdown_cols_qry_schema);
+        qop_query_preds = "";
+    }
 
     if (debug) {
         if (query == "flatbuf" || query == "fastpath") {
