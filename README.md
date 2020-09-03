@@ -1,6 +1,7 @@
 # SkyhookDM Ceph RADOS Class
 
 [![Build Status](https://travis-ci.com/uccross/skyhookdm-ceph-cls.svg?branch=master)](https://travis-ci.com/uccross/skyhookdm-ceph-cls)
+[![CROSS](https://img.shields.io/badge/supported%20by-CROSS-green)](https://cross.ucsc.edu)
 
 ## What is SkyhookDM?
 
