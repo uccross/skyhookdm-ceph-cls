@@ -3,8 +3,6 @@
 
 #include "test_utils.h"
 #include "gtest/gtest.h"
-//#include <rados/librados.hpp>
-//#include <rados/objclass.h>
 
 using namespace librados;
 

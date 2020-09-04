@@ -1,4 +1,3 @@
-// TOOD
 #include "test_utils.h"
 using namespace librados;
 std::string create_one_pool_pp(const std::string &pool_name, Rados &cluster)
