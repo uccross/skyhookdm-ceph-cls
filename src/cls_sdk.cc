@@ -4,7 +4,7 @@
 #include "rados/objclass.h"
 
 CLS_VER(1,0)
-CLS_NAME(sdk)
+CLS_NAME(arrow_cls)
 
 cls_handle_t h_class;
 cls_method_handle_t h_test_coverage_write;
@@ -115,11 +115,11 @@ static int test_coverage_replay(cls_method_context_t hctx, ceph::buffer::list *i
   return 0;
 }
 
-CLS_INIT(sdk)
+CLS_INIT(arrow_cls)
 {
-  CLS_LOG(0, "loading cls_sdk");
+  CLS_LOG(0, "loading arrow_cls");
 
-  cls_register("sdk", &h_class);
+  cls_register("arrow_cls", &h_class);
 
   cls_register_cxx_method(h_class, "test_coverage_write",
       CLS_METHOD_RD|CLS_METHOD_WR,

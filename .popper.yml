@@ -8,3 +8,20 @@ steps:
     cd build/
     cmake ..
     make VERBOSE=1
+
+- id: build-rook-img
+  uses: docker://docker:19.03.10
+  args:
+  - build
+  -   --build-arg=CEPH_RELEASE=v14.2.9
+  -   --tag=uccross/skyhookdm-ceph:v14.2.9
+  -   --file=docker/Dockerfile.release
+  -   .
+
+- id: test
+  uses: docker://uccross/skyhookdm-ceph:v14.2.9
+  skip_pull: true
+  runs: [bash]
+  env:
+    LD_LIBRARY_PATH: /usr/lib64/ceph
+  args: [scripts/run_tests.sh]
