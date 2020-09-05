@@ -19,9 +19,13 @@ steps:
   -   .
 
 - id: test
-  uses: docker://uccross/skyhookdm-ceph:v14.2.9
-  skip_pull: true
-  runs: [bash]
-  env:
-    LD_LIBRARY_PATH: /usr/lib64/ceph
-  args: [scripts/run_tests.sh]
+  uses: ./docker/builder
+  runs: [bash, -euxc]
+  args:
+  - |
+    cp ceph/build/bin/cls_sdk_test /usr/bin/ 
+    cp ceph/build/lib/arrow_cls.so* /usr/lib64/rados-classes/
+    TEST_DIR="test"
+    CONF_DIR="/etc/ceph"
+    scripts/mircro-osd.sh $TEST_DIR $CONF_DIR
+    sripts/run_tests.sh  
