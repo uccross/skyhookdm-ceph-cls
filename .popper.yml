@@ -9,23 +9,11 @@ steps:
     cmake ..
     make VERBOSE=1
 
-- id: build-rook-img
-  uses: docker://docker:19.03.10
-  args:
-  - build
-  -   --build-arg=CEPH_RELEASE=v14.2.9
-  -   --tag=uccross/skyhookdm-ceph:v14.2.9
-  -   --file=docker/Dockerfile.release
-  -   .
-
 - id: test
   uses: ./docker/builder
   runs: [bash, -euxc]
   args:
   - |
-    cp /workspace/build/bin/cls_sdk_test /usr/bin/ 
-    cp /workspace/build/lib/libcls_sdk.so* /usr/lib64/rados-classes/
-    TEST_DIR="test"
-    CONF_DIR="/etc/ceph"
-    /workspace/scripts/mircro-osd.sh $TEST_DIR $CONF_DIR
-    /workspace/sripts/run_tests.sh  
+    cp build/lib/libcls_sdk.so* /usr/lib64/rados-classes/
+    scripts/micro-osd.sh test-cluster /etc/ceph
+    build/bin/cls_sdk_test
