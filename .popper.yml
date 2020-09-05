@@ -23,9 +23,9 @@ steps:
   runs: [bash, -euxc]
   args:
   - |
-    cp ceph/build/bin/cls_sdk_test /usr/bin/ 
-    cp ceph/build/lib/arrow_cls.so* /usr/lib64/rados-classes/
+    cp /workspace/build/bin/cls_sdk_test /usr/bin/ 
+    cp /workspace/build/lib/libcls_sdk.so* /usr/lib64/rados-classes/
     TEST_DIR="test"
     CONF_DIR="/etc/ceph"
-    scripts/mircro-osd.sh $TEST_DIR $CONF_DIR
-    sripts/run_tests.sh  
+    /workspace/scripts/mircro-osd.sh $TEST_DIR $CONF_DIR
+    /workspace/sripts/run_tests.sh  
