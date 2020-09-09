@@ -24,7 +24,7 @@ TEST(ClsSDK, TestSDKCoverageWrite) {
 TEST(ClsSDK, TestSDKCoverageReplay) {
   Rados cluster;
   //std::string pool_name = get_temp_pool_name();
-  std::string pool_name = "testPool";
+  std::string pool_name = "testPool2";
   ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
   IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
