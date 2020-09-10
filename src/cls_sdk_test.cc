@@ -9,8 +9,8 @@ using namespace librados;
 
 TEST(ClsSDK, TestSDKCoverageWrite) {
   Rados cluster;
-  //std::string pool_name = get_temp_pool_name();
-  std::string pool_name = "testPool";
+  std::string pool_name = get_temp_pool_name();
+  //std::string pool_name = "testPool";
   ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
   IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
@@ -18,13 +18,13 @@ TEST(ClsSDK, TestSDKCoverageWrite) {
   bufferlist in, out;
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_write", in, out));
 
-  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+  //ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }
 
 TEST(ClsSDK, TestSDKCoverageReplay) {
   Rados cluster;
-  //std::string pool_name = get_temp_pool_name();
-  std::string pool_name = "testPool2";
+  std::string pool_name = get_temp_pool_name();
+  //std::string pool_name = "testPool2";
   ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
   IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
@@ -33,5 +33,5 @@ TEST(ClsSDK, TestSDKCoverageReplay) {
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_write", in, out));
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_replay", in, out));
 
-  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+  //ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }
