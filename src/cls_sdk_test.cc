@@ -18,7 +18,7 @@ TEST(ClsSDK, TestSDKCoverageWrite) {
   bufferlist in, out;
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_write", in, out));
 
-  //ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }
 
 TEST(ClsSDK, TestSDKCoverageReplay) {
@@ -33,5 +33,5 @@ TEST(ClsSDK, TestSDKCoverageReplay) {
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_write", in, out));
   ASSERT_EQ(0, ioctx.exec("myobject", "arrow_cls", "test_coverage_replay", in, out));
 
-  //ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }

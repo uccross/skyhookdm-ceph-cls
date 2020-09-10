@@ -38,6 +38,7 @@ chdir = ""
 mon cluster log file = ${TEST_DIR}/log/mon-cluster.log
 mon data = ${MON_DATA}
 mon addr = 127.0.0.1
+mon_allow_pool_delete = true
 EOF
 
 ceph-mon --id 0 --mkfs --keyring /dev/null
