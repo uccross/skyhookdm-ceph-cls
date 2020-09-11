@@ -14,6 +14,6 @@ steps:
   runs: [bash, -euxc]
   args:
   - |
-    cp build/lib/libcls_arrow_cls.so* /usr/lib64/rados-classes/
+    cp build/lib/libcls_sdk.so* /usr/lib64/rados-classes/
     scripts/micro-osd.sh test-cluster /etc/ceph
     build/bin/cls_sdk_test

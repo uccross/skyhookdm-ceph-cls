@@ -58,7 +58,7 @@ osd data = ${OSD_DATA}
 osd journal = ${OSD_DATA}.journal
 osd journal size = 100
 osd objectstore = memstore
-osd class load list = lock log numops refcount replica_log statelog timeindex user version arrow_cls
+osd class load list = lock log numops refcount replica_log statelog timeindex user version cls_sdk
 EOF
 
 OSD_ID=$(ceph osd create)
