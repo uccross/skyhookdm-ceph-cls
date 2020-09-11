@@ -118,7 +118,7 @@ static int test_coverage_replay(cls_method_context_t hctx,
   return 0;
 }
 
-CLS_INIT(arrow_cls) {
+CLS_INIT(sdk) {
   CLS_LOG(20, "loading arrow_cls");
 
   cls_register("sdk", &h_class);
