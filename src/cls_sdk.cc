@@ -117,8 +117,7 @@ static int test_coverage_replay(cls_method_context_t hctx, ceph::buffer::list *i
 
 CLS_INIT(arrow_cls)
 {
-  CLS_ERR("Look over here");
-  CLS_LOG(0, "loading arrow_cls");
+  CLS_LOG(20, "loading arrow_cls");
 
   cls_register("arrow_cls", &h_class);
 

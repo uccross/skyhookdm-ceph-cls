@@ -38,6 +38,7 @@ chdir = ""
 mon cluster log file = ${TEST_DIR}/log/mon-cluster.log
 mon data = ${MON_DATA}
 mon addr = 127.0.0.1
+# this was added to enable pool deletion within method delete_one_pool_pp()
 mon_allow_pool_delete = true
 EOF
 
