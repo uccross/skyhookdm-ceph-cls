@@ -8,9 +8,17 @@ CLS_VER(1, 0)
 CLS_NAME(cls_sdk)
 
 cls_handle_t h_class;
+cls_method_handle_t h_create_fragment;
 cls_method_handle_t h_test_coverage_write;
 cls_method_handle_t h_test_coverage_replay;
 
+
+static int create_fragment(cls_method_context_t hctx,
+                           ceph::buffer::list *in,
+                           ceph::buffer::list *out) {
+
+  return 0;
+}
 /**
  * test_coverage_write - a "write" method that creates an object
  *
@@ -122,7 +130,10 @@ CLS_INIT(cls_sdk) {
   CLS_LOG(20, "loading cls_sdk class");
 
   cls_register("cls_sdk", &h_class);
-
+  cls_register_cxx_method(h_class, "create_fragment",
+                          CLS_METHOD_RD, create_fragment,
+                          &h_create_fragment);
+  
   cls_register_cxx_method(h_class, "test_coverage_write",
                           CLS_METHOD_RD | CLS_METHOD_WR, test_coverage_write,
                           &h_test_coverage_write);

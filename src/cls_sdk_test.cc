@@ -33,3 +33,14 @@ TEST(ClsSDK, TestSDKCoverageReplay) {
 
   ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }
+
+TEST(ClsSDK, TestCreateFragment) {
+  Rados cluster;
+  std::string pool_name = get_temp_pool_name();
+  ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
+  IoCtx ioctx;
+  cluster.ioctx_create(pool_name.c_str(), ioctx);
+  bufferlist in, out;
+  ASSERT_EQ(0, ioctx.exec("test_object", "cls_sdk", "create_fragment", in, out));
+  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+}
