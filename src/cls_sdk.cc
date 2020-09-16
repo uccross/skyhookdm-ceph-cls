@@ -16,7 +16,11 @@ cls_method_handle_t h_test_coverage_replay;
 static int create_fragment(cls_method_context_t hctx,
                            ceph::buffer::list *in,
                            ceph::buffer::list *out) {
-
+  int ret = cls_cxx_create(hctx, false);
+  if (ret < 0) {
+    CLS_LOG(0, "ERROR: %s(): cls_cxx_create returned %d", __func__, ret);
+    return ret;
+  } 
   return 0;
 }
 /**
@@ -131,7 +135,7 @@ CLS_INIT(cls_sdk) {
 
   cls_register("cls_sdk", &h_class);
   cls_register_cxx_method(h_class, "create_fragment",
-                          CLS_METHOD_RD, create_fragment,
+                          CLS_METHOD_RD | CLS_METHOD_WR, create_fragment,
                           &h_create_fragment);
   
   cls_register_cxx_method(h_class, "test_coverage_write",
