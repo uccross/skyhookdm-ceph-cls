@@ -41,6 +41,8 @@ TEST(ClsSDK, TestCreateFragment) {
   IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
   bufferlist in, out;
+  // create an object first,then call exec on our method for that obj
+  ASSERT_EQ(0, ioctx.exec("test_object", "cls_sdk", "test_coverage_write", in, out));
   ASSERT_EQ(0, ioctx.exec("test_object", "cls_sdk", "create_fragment", in, out));
   ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }

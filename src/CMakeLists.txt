@@ -8,6 +8,9 @@ set_target_properties(cls_cls_sdk PROPERTIES
   INSTALL_RPATH ""
   CXX_VISIBILITY_PRESET hidden
   )
+target_link_libraries(cls_cls_sdk
+        arrow
+        )
 
 install(TARGETS cls_cls_sdk DESTINATION ${cls_dir})
 
@@ -22,6 +25,7 @@ target_link_libraries(cls_sdk_test
   ${GTEST_MAIN_LIBRARIES}
   ${GTEST_INCLUDE_DIRS}	
   ${GTEST_LIBRARIES}
+  arrow
   )
 
 install(TARGETS
