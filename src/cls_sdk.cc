@@ -72,6 +72,21 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
   if (table == nullptr) {
     CLS_LOG(0, "ERROR: Failed to create arrow table");
   }
+  std::shared_ptr<arrow::TableBatchReader> tableBatchReader =
+    std::make_shared<arrow::TableBatchReader>(*table);
+
+  std::shared_ptr<arrow::Schema> tableSchema = tableBatchReader->schema();
+
+  arrow::RecordBatchVector recordBatchVector;
+
+  std::shared_ptr<arrow::RecordBatch> outBatch;
+  tableBatchReader->ReadNext(&outBatch);
+  recordBatchVector.push_back(outBatch);
+
+  std::shared_ptr<arrow::dataset::InMemoryFragment> fragment =
+      std::make_shared<arrow::dataset::InMemoryFragment>(tableSchema,
+                                                         recordBatchVector);
+ 
   return 0;
 }
 /**
