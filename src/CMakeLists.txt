@@ -10,7 +10,7 @@ set_target_properties(cls_cls_sdk PROPERTIES
   )
 target_link_libraries(cls_cls_sdk
         arrow
-	arrow_shared
+	arrow_dataset
         )
 
 install(TARGETS cls_cls_sdk DESTINATION ${cls_dir})
@@ -26,8 +26,6 @@ target_link_libraries(cls_sdk_test
   ${GTEST_MAIN_LIBRARIES}
   ${GTEST_INCLUDE_DIRS}	
   ${GTEST_LIBRARIES}
-  arrow
-  arrow_shared
   )
 
 install(TARGETS
