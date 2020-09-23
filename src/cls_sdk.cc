@@ -18,16 +18,17 @@ cls_method_handle_t h_test_coverage_write;
 cls_method_handle_t h_test_coverage_replay;
 cls_method_handle_t h_create_fragment;
 
-/**
+/*
  * Function: convert_arrow_to_buffer
  * Description: Convert arrow table into record batches which are dumped on to a
- *              output buffer. For converting arrow table three things are
- * essential. a. Where to write - In this case we are using buffer, but it can
- * be streams or files as well b. OutputStream - We connect a buffer (or file)
- * to the stream and writer writes data from this stream. We are using
- * arrow::BufferOutputStream as an output stream. c. Writer - Does writing data
- * to OutputStream. We are using arrow::RecordBatchStreamWriter which will write
- * the data to output stream.
+ *              output buffer. For converting arrow table three things are essential.
+ *  a. Where to write - In this case we are using buffer, but it can be streams or
+ *                      files as well
+ *  b. OutputStream - We connect a buffer (or file) to the stream and writer writes
+ *                    data from this stream. We are using arrow::BufferOutputStream
+ *                    as an output stream.
+ *  c. Writer - Does writing data to OutputStream. We are using arrow::RecordBatchStreamWriter
+ *              which will write the data to output stream.
  * @param[in] table   : Arrow table to be converted
  * @param[out] buffer : Output buffer
  * Return Value: error code
@@ -63,6 +64,16 @@ static int convert_arrow_to_buffer(const std::shared_ptr<arrow::Table> &table,
   return 0;
 }
 
+/**
+ * create_fragment
+ *
+ * This method created an arrow table with faked data, and convert the table to
+ * InMemoryFragment, and then convert to ScannerBuilder. Filter and Projection
+ * operation can be added to the arrow::dataset::ScannerBuilder.
+ *
+ * Then, we convert the ScannerBuilder back to arrow table and write it to Ceph
+ * bufferlist and to object finally.
+ */
 static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
                            ceph::buffer::list *out) {
   // create the object
