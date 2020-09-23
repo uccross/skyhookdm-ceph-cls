@@ -18,6 +18,7 @@ cls_method_handle_t h_create_fragment;
 
 static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
                            ceph::buffer::list *out) {
+  // create the object
   int ret = cls_cxx_create(hctx, false);
   if (ret < 0) {
     CLS_LOG(0, "ERROR: %s(): cls_cxx_create returned %d", __func__, ret);
@@ -30,7 +31,9 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
     return ret;
   CLS_LOG(0, "data read=%s", bl.c_str(), std::to_string(ret).c_str());
 
+  // create a memory pool
   arrow::MemoryPool *pool = arrow::default_memory_pool();
+  // arrow array builder for each table column
   arrow::Int32Builder id_builder(pool);
   arrow::DoubleBuilder cost_builder(pool);
   arrow::ListBuilder components_builder(
@@ -38,7 +41,8 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
   // The following builder is owned by components_builder.
   arrow::DoubleBuilder &cost_components_builder = *(
       static_cast<arrow::DoubleBuilder *>(components_builder.value_builder()));
-
+  
+  // append some fake data
   for (int i = 0; i < 10; ++i) {
     id_builder.Append(i);
     cost_builder.Append(i + 1.0);
@@ -62,6 +66,7 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
   std::shared_ptr<arrow::ListArray> cost_components_array;
   components_builder.Finish(&cost_components_array);
 
+  // create table schema
   std::vector<std::shared_ptr<arrow::Field>> schema_vector = {
       arrow::field("id", arrow::int32()),
       arrow::field("cost", arrow::float64()),
@@ -72,6 +77,9 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
   if (table == nullptr) {
     CLS_LOG(0, "ERROR: Failed to create arrow table");
   }
+
+  // Convert an arrow Table to InMemoryFragment 
+  // Use the TableBatchReader to convert it to record batchses first
   std::shared_ptr<arrow::TableBatchReader> tableBatchReader =
     std::make_shared<arrow::TableBatchReader>(*table);
 
@@ -79,16 +87,18 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
 
   arrow::RecordBatchVector recordBatchVector;
 
-  std::shared_ptr<arrow::RecordBatch> outBatch;
-  tableBatchReader->ReadNext(&outBatch);
-  recordBatchVector.push_back(outBatch);
-
+  if (!tableBatchReader->ReadAll(&recordBatchVector).ok()) {
+    CLS_LOG(0, "ERROR: Failed to read as record batches vector");
+  }
+  // create fragment from table schema and recordbatch vector
   std::shared_ptr<arrow::dataset::InMemoryFragment> fragment =
       std::make_shared<arrow::dataset::InMemoryFragment>(tableSchema,
                                                          recordBatchVector);
  
-  return 0;
+ 
+ return 0;
 }
+
 /**
  * test_coverage_write - a "write" method that creates an object
  *
