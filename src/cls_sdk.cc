@@ -5,6 +5,8 @@
 #include "rados/objclass.h"
 #include <arrow/api.h>
 #include <arrow/dataset/api.h>
+#include <arrow/io/api.h>
+#include <arrow/ipc/api.h>
 
 #include <vector>
 
@@ -15,6 +17,51 @@ cls_handle_t h_class;
 cls_method_handle_t h_test_coverage_write;
 cls_method_handle_t h_test_coverage_replay;
 cls_method_handle_t h_create_fragment;
+
+/**
+ * Function: convert_arrow_to_buffer
+ * Description: Convert arrow table into record batches which are dumped on to a
+ *              output buffer. For converting arrow table three things are
+ * essential. a. Where to write - In this case we are using buffer, but it can
+ * be streams or files as well b. OutputStream - We connect a buffer (or file)
+ * to the stream and writer writes data from this stream. We are using
+ * arrow::BufferOutputStream as an output stream. c. Writer - Does writing data
+ * to OutputStream. We are using arrow::RecordBatchStreamWriter which will write
+ * the data to output stream.
+ * @param[in] table   : Arrow table to be converted
+ * @param[out] buffer : Output buffer
+ * Return Value: error code
+ */
+static int convert_arrow_to_buffer(const std::shared_ptr<arrow::Table> &table,
+                                   std::shared_ptr<arrow::Buffer> *buffer) {
+  // Initialization related to writing to the the file
+  std::shared_ptr<arrow::ipc::RecordBatchWriter> writer;
+  arrow::Result<std::shared_ptr<arrow::io::BufferOutputStream>> out;
+  std::shared_ptr<arrow::io::BufferOutputStream> output;
+  out = arrow::io::BufferOutputStream::Create();
+  if (out.ok()) {
+    output = out.ValueOrDie();
+    arrow::io::OutputStream *raw_out = output.get();
+    arrow::Table *raw_table = table.get();
+    const arrow::ipc::IpcWriteOptions options =
+        arrow::ipc::IpcWriteOptions::Defaults();
+    arrow::Result<std::shared_ptr<arrow::ipc::RecordBatchWriter>> result =
+        arrow::ipc::NewStreamWriter(raw_out, raw_table->schema(), options);
+    if (result.ok()) {
+      writer = std::move(result).ValueOrDie();
+    }
+  }
+
+  // Initialization related to reading from arrow
+  writer->WriteTable(*(table.get()));
+  writer->Close();
+  arrow::Result<std::shared_ptr<arrow::Buffer>> buff;
+  buff = output->Finish();
+  if (buff.ok()) {
+    *buffer = buff.ValueOrDie();
+  }
+  return 0;
+}
 
 static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
                            ceph::buffer::list *out) {
@@ -41,7 +88,7 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
   // The following builder is owned by components_builder.
   arrow::DoubleBuilder &cost_components_builder = *(
       static_cast<arrow::DoubleBuilder *>(components_builder.value_builder()));
-  
+
   // append some fake data
   for (int i = 0; i < 10; ++i) {
     id_builder.Append(i);
@@ -76,27 +123,61 @@ static int create_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
       arrow::Table::Make(schema, {id_array, cost_array, cost_components_array});
   if (table == nullptr) {
     CLS_LOG(0, "ERROR: Failed to create arrow table");
+    return -1;
   }
 
-  // Convert an arrow Table to InMemoryFragment 
+  // *********** Now we have the arrow table ***********************************
+
+  // Convert an arrow Table to InMemoryFragment
   // Use the TableBatchReader to convert it to record batchses first
   std::shared_ptr<arrow::TableBatchReader> tableBatchReader =
-    std::make_shared<arrow::TableBatchReader>(*table);
+      std::make_shared<arrow::TableBatchReader>(*table);
 
   std::shared_ptr<arrow::Schema> tableSchema = tableBatchReader->schema();
 
   arrow::RecordBatchVector recordBatchVector;
-
   if (!tableBatchReader->ReadAll(&recordBatchVector).ok()) {
     CLS_LOG(0, "ERROR: Failed to read as record batches vector");
+    return -1;
   }
   // create fragment from table schema and recordbatch vector
   std::shared_ptr<arrow::dataset::InMemoryFragment> fragment =
       std::make_shared<arrow::dataset::InMemoryFragment>(tableSchema,
                                                          recordBatchVector);
- 
- 
- return 0;
+
+  std::shared_ptr<arrow::dataset::ScanContext> scanContext =
+      std::make_shared<arrow::dataset::ScanContext>();
+
+  // create the ScannerBuilder and get the Scanner
+  arrow::dataset::ScannerBuilder *scannerBuilder =
+      new arrow::dataset::ScannerBuilder(tableSchema, fragment, scanContext);
+
+  // ** Filter and Projection operation can be done here in ScannerBuilder *****
+
+  arrow::Result<std::shared_ptr<arrow::dataset::Scanner>> result =
+      scannerBuilder->Finish();
+
+  if (result.ok()) {
+    // Now we have the Scanner, we can transform the Scanner to arrow table
+    // again and write the raw data to Ceph buffer list
+    std::shared_ptr<arrow::dataset::Scanner> scanner = result.ValueOrDie();
+    std::shared_ptr<arrow::Table> out_table = scanner->ToTable().ValueOrDie();
+
+    std::shared_ptr<arrow::Buffer> buffer;
+    convert_arrow_to_buffer(out_table, &buffer);
+    bl.append((char *)buffer->data(), buffer->size());
+
+    // write to the object
+    ret = cls_cxx_write(hctx, 0, bl.length(), &bl);
+    if (ret < 0)
+      return ret;
+
+  } else {
+    CLS_LOG(0, "ERROR: Failed to build arrow dataset Scanner");
+    return -1;
+  }
+
+  return 0;
 }
 
 /**
@@ -219,7 +300,7 @@ CLS_INIT(cls_sdk) {
                           CLS_METHOD_RD | CLS_METHOD_WR, test_coverage_replay,
                           &h_test_coverage_replay);
 
-    cls_register_cxx_method(h_class, "create_fragment",
-    CLS_METHOD_RD | CLS_METHOD_WR, create_fragment,
-    &h_create_fragment);
+  cls_register_cxx_method(h_class, "create_fragment",
+                          CLS_METHOD_RD | CLS_METHOD_WR, create_fragment,
+                          &h_create_fragment);
 }
