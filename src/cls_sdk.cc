@@ -212,6 +212,7 @@ static int test_create_fragment(cls_method_context_t hctx,
 
   // *********** Now we have the arrow table ***********************************
 
+
   // Convert an arrow Table to InMemoryFragment
   // Use the TableBatchReader to convert it to record batchses first
   std::shared_ptr<arrow::TableBatchReader> tableBatchReader =
