@@ -1,7 +1,7 @@
 set(cls_dir ${CMAKE_INSTALL_LIBDIR}/rados-classes)
 
 # cls_sdk
-add_library(cls_cls_sdk SHARED cls_sdk.cc arrow_utils.cc)
+add_library(cls_cls_sdk SHARED cls_sdk.cc cls_sdk_utils.cc)
 set_target_properties(cls_cls_sdk PROPERTIES
         VERSION "1.0.0"
         SOVERSION "1"
