@@ -85,10 +85,10 @@ static int test_create_fragment(cls_method_context_t hctx,
 
     std::shared_ptr<arrow::Buffer> buffer;
     convert_arrow_to_buffer(out_table, &buffer);
-      
+
     // write the data to bl
     ceph::buffer::list bl;
-    bl.append((char *)buffer->data(), buffer->size());
+    bl.push_back(ceph::buffer::create_static(buffer->size(), (char *)buffer->data()));
 
     // write to the object
     ret = cls_cxx_write(hctx, 0, bl.length(), &bl);
