@@ -4,13 +4,12 @@
 #include "test_utils.h"
 #include "gtest/gtest.h"
 
-using namespace librados;
 
 TEST(ClsSDK, TestCreateAndReadFragment) {
-  Rados cluster;
+  librados::Rados cluster;
   std::string pool_name = get_temp_pool_name();
   ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
-  IoCtx ioctx;
+  librados::IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
   bufferlist in, out;
 
