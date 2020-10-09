@@ -1,6 +1,8 @@
 #include "rados/objclass.h"
 #include "cls_sdk_utils.h"
 
+#include <iostream>
+
 #include <arrow/api.h>
 #include <arrow/dataset/api.h>
 #include <arrow/io/api.h>
@@ -14,12 +16,11 @@ cls_method_handle_t h_read;
 cls_method_handle_t h_test_create_fragment;
 cls_method_handle_t h_test_read_fragment;
 
-static arrow::Status extract_batches_from_bufferlist(std::shared_ptr<arrow::Schema> *schema, arrow::RecordBatchVector *batches, ceph::buffer::list &bl) {
+static arrow::Status extract_batches_from_bufferlist(arrow::RecordBatchVector *batches, ceph::buffer::list &bl) {
   std::shared_ptr<arrow::Buffer> buffer = std::make_shared<arrow::Buffer>((uint8_t*)bl.c_str(), bl.length());
   std::shared_ptr<arrow::io::BufferReader> buffer_reader = std::make_shared<arrow::io::BufferReader>(buffer);
   ARROW_ASSIGN_OR_RAISE(auto record_batch_reader, arrow::ipc::RecordBatchStreamReader::Open(buffer_reader));
   ARROW_RETURN_NOT_OK(record_batch_reader->ReadAll(batches));
-  *schema = record_batch_reader->schema();
   return arrow::Status::OK();
 }
 
@@ -49,9 +50,19 @@ static arrow::Status scan_batches(std::shared_ptr<arrow::Schema> &schema, arrow:
 }
 
 static int read(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer::list *out) {
-  ceph::buffer::list bl;
   int ret;
+  arrow::Status arrow_ret;
   
+  std::shared_ptr<arrow::dataset::Expression> filter;
+  std::shared_ptr<arrow::Schema> schema;
+
+  arrow_ret = deserialize_scan_request_from_bufferlist(&filter, &schema, *in);
+  if (!arrow_ret.ok()) {
+    CLS_ERR("ERROR: Failed to extract arrow::dataset::Expression and arrow::Schema");
+    return -1;
+  }
+
+  ceph::buffer::list bl;
   ret = cls_cxx_read(hctx, 0, 0, &bl);
   if (ret < 0) {
     CLS_ERR("ERROR: Failed to read an object");
@@ -59,10 +70,7 @@ static int read(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer:
   }
 
   arrow::RecordBatchVector batches;
-  std::shared_ptr<arrow::Schema> schema;
-  arrow::Status arrow_ret;
-  
-  arrow_ret = extract_batches_from_bufferlist(&schema, &batches, bl);
+  arrow_ret = extract_batches_from_bufferlist(&batches, bl);
   if (!arrow_ret.ok()) {
     CLS_ERR("ERROR: Failed to extract arrow::RecordBatchVector from ceph::buffer::list");
     return -1;
@@ -89,6 +97,7 @@ static int read(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer:
 static int test_create_fragment(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer::list *out) {
   // Create a test object
   int ret;
+  arrow::Status arrow_ret;
 
   ret = cls_cxx_create(hctx, false);
   if (ret < 0) {
@@ -105,9 +114,7 @@ static int test_create_fragment(cls_method_context_t hctx, ceph::buffer::list *i
   }
 
   // Write the test arrow table to a bufferlist
-  ceph::buffer::list bl;
-  arrow::Status arrow_ret;
-  
+  ceph::buffer::list bl;  
   arrow_ret = write_table_to_bufferlist(table, bl);
   if (!arrow_ret.ok()) {
     CLS_ERR("ERROR: Failed to write arrow::Table to ceph::buffer::list");
@@ -124,14 +131,25 @@ static int test_create_fragment(cls_method_context_t hctx, ceph::buffer::list *i
   return 0;
 }
 
-static int test_read_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
-                              ceph::buffer::list *out) {
+static int test_read_fragment(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer::list *out) {
+  int ret;
+  arrow::Status arrow_ret;
+
   // Get the test arrow table
   std::shared_ptr<arrow::Table> table;
-  int ret = create_test_arrow_table(&table);
+  ret = create_test_arrow_table(&table);
   if (ret < 0) {
     CLS_ERR("ERROR: Failed to create the test arrow::Table");
     return ret;
+  }
+
+  // Deserialize the Expression and Filter
+  std::shared_ptr<arrow::dataset::Expression> filter;
+  std::shared_ptr<arrow::Schema> schema;
+  arrow_ret = deserialize_scan_request_from_bufferlist(&filter, &schema, *in);
+  if (!arrow_ret.ok()) {
+    CLS_ERR("ERROR: Failed to extract arrow::dataset::Expression and arrow::Schema");
+    return -1;
   }
 
   // Read the object's data
@@ -144,10 +162,7 @@ static int test_read_fragment(cls_method_context_t hctx, ceph::buffer::list *in,
 
   // Read a vector of RecordBatches from bufferlist
   arrow::RecordBatchVector batches;
-  std::shared_ptr<arrow::Schema> schema;
-  arrow::Status arrow_ret;
-
-  arrow_ret = extract_batches_from_bufferlist(&schema, &batches, bl);
+  arrow_ret = extract_batches_from_bufferlist(&batches, bl);
   if (!arrow_ret.ok()) {
     CLS_ERR("ERROR: Failed to extract arrow::RecordBatchVector from ceph::buffer::list");
     return -1;
