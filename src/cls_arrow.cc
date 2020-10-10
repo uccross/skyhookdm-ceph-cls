@@ -11,8 +11,27 @@ CLS_NAME(arrow)
 
 cls_handle_t h_class;
 cls_method_handle_t h_read;
+cls_method_handle_t h_write;
 cls_method_handle_t h_test_create;
 cls_method_handle_t h_test_read;
+
+static int write(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer::list *out) {
+  int ret;
+
+  ret = cls_cxx_create(hctx, false);
+  if (ret < 0) {
+    CLS_ERR("ERROR: Failed to create an object");
+    return ret;
+  }
+
+  ret = cls_cxx_write(hctx, 0, in->length(), in);
+  if (ret < 0) {
+    CLS_ERR("ERROR: Failed to write to object");
+    return ret;
+  }
+
+  return 0;
+}
 
 static int read(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer::list *out) {
   int ret;
@@ -89,7 +108,7 @@ static int test_create(cls_method_context_t hctx, ceph::buffer::list *in, ceph::
   // Write bufferlist to the object
   ret = cls_cxx_write(hctx, 0, bl.length(), &bl);
   if (ret < 0) {
-    CLS_ERR("Failed to write to object");
+    CLS_ERR("ERROR: Failed to write to object");
     return ret;
   }
 
@@ -169,6 +188,10 @@ CLS_INIT(arrow)
   cls_register_cxx_method(h_class, "read",
                           CLS_METHOD_RD | CLS_METHOD_WR, read,
                           &h_read);
+
+  cls_register_cxx_method(h_class, "write",
+                          CLS_METHOD_RD | CLS_METHOD_WR, write,
+                          &h_write);
 
   cls_register_cxx_method(h_class, "test_create",
                           CLS_METHOD_RD | CLS_METHOD_WR, test_create,
