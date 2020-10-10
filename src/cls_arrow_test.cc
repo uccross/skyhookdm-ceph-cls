@@ -1,7 +1,7 @@
 #include <iostream>
 #include <errno.h>
 
-#include "cls_sdk_utils.h"
+#include "cls_arrow_utils.h"
 #include "test_utils.h"
 #include "gtest/gtest.h"
 
@@ -23,7 +23,7 @@ TEST(ClsSDK, TestCreateAndReadFragment) {
   serialize_scan_request_to_bufferlist(filter, schema, in); 
 
   // Create an object containing a table and read back the table from the same object 
-  ASSERT_EQ(0, ioctx.exec("test_object", "cls_sdk", "test_create_fragment", in, out));
-  ASSERT_EQ(0, ioctx.exec("test_object", "cls_sdk", "test_read_fragment", in, out));
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "test_create", in, out));
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "test_read", in, out));
   ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }

@@ -1,4 +1,4 @@
-#include "cls_sdk_utils.h"
+#include "cls_arrow_utils.h"
 
 int create_test_arrow_table(std::shared_ptr<arrow::Table> *out_table) {
     
@@ -117,5 +117,39 @@ arrow::Status serialize_scan_request_to_bufferlist(std::shared_ptr<arrow::datase
   bl.append(schema_size_buffer, 8);
   bl.append((char*)schema_buffer->data(), schema_buffer->size());
 
+  return arrow::Status::OK();
+}
+
+
+arrow::Status extract_batches_from_bufferlist(arrow::RecordBatchVector *batches, ceph::buffer::list &bl) {
+  std::shared_ptr<arrow::Buffer> buffer = std::make_shared<arrow::Buffer>((uint8_t*)bl.c_str(), bl.length());
+  std::shared_ptr<arrow::io::BufferReader> buffer_reader = std::make_shared<arrow::io::BufferReader>(buffer);
+  ARROW_ASSIGN_OR_RAISE(auto record_batch_reader, arrow::ipc::RecordBatchStreamReader::Open(buffer_reader));
+  ARROW_RETURN_NOT_OK(record_batch_reader->ReadAll(batches));
+  return arrow::Status::OK();
+}
+
+arrow::Status write_table_to_bufferlist(std::shared_ptr<arrow::Table> &table, ceph::buffer::list &bl) {
+  ARROW_ASSIGN_OR_RAISE(auto buffer_output_stream, arrow::io::BufferOutputStream::Create());
+  const auto options = arrow::ipc::IpcWriteOptions::Defaults();
+  ARROW_ASSIGN_OR_RAISE(auto writer, arrow::ipc::NewStreamWriter(buffer_output_stream.get(), table->schema(), options));
+
+  writer->WriteTable(*table);
+  writer->Close();
+
+  ARROW_ASSIGN_OR_RAISE(auto buffer, buffer_output_stream->Finish());
+  bl.append((char*)buffer->data(), buffer->size());
+  return arrow::Status::OK();
+}
+
+arrow::Status scan_batches(std::shared_ptr<arrow::Schema> &schema, arrow::RecordBatchVector &batches, std::shared_ptr<arrow::Table> *table) {
+  std::shared_ptr<arrow::dataset::ScanContext> scan_context = std::make_shared<arrow::dataset::ScanContext>();
+  std::shared_ptr<arrow::dataset::InMemoryFragment> fragment = std::make_shared<arrow::dataset::InMemoryFragment>(batches);
+  std::shared_ptr<arrow::dataset::ScannerBuilder> builder = std::make_shared<arrow::dataset::ScannerBuilder>(schema, fragment, scan_context);
+  
+  ARROW_ASSIGN_OR_RAISE(auto scanner, builder->Finish());
+  ARROW_ASSIGN_OR_RAISE(auto table_, scanner->ToTable());
+
+  *table = table_;
   return arrow::Status::OK();
 }
