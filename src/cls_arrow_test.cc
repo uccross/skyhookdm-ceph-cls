@@ -6,24 +6,66 @@
 #include "gtest/gtest.h"
 
 
-TEST(ClsSDK, TestCreateAndReadFragment) {
+TEST(ClsSDK, TestWriteAndReadTable) {
   librados::Rados cluster;
   std::string pool_name = get_temp_pool_name();
   ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
   librados::IoCtx ioctx;
   cluster.ioctx_create(pool_name.c_str(), ioctx);
+  
+  // WTITE PATH
   librados::bufferlist in, out;
+  std::shared_ptr<arrow::Table> table;
+  create_test_arrow_table(&table);
+  write_table_to_bufferlist(table, in);
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "write", in, out));
 
+  // READ PATH
+  librados::bufferlist in_, out_;
   auto filter = arrow::dataset::scalar(true);
   auto schema = arrow::schema({
       arrow::field("id", arrow::int32()),
       arrow::field("cost", arrow::float64()),
       arrow::field("cost_components", arrow::list(arrow::float64()))});
+  serialize_scan_request_to_bufferlist(filter, schema, in_);
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "read", in_, out_));
+  std::shared_ptr<arrow::Table> table_;
+  read_table_from_bufferlist(&table_, out_);
+  ASSERT_EQ(table->Equals(*table_), 1);
 
-  serialize_scan_request_to_bufferlist(filter, schema, in); 
+  ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
+}
 
-  // Create an object containing a table and read back the table from the same object 
-  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "test_create", in, out));
-  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "test_read", in, out));
+
+TEST(ClsSDK, TestProjection) {
+  librados::Rados cluster;
+  std::string pool_name = get_temp_pool_name();
+  ASSERT_EQ("", create_one_pool_pp(pool_name, cluster));
+  librados::IoCtx ioctx;
+  cluster.ioctx_create(pool_name.c_str(), ioctx);
+  
+  // WTITE PATH
+  librados::bufferlist in, out;
+  std::shared_ptr<arrow::Table> table;
+  create_test_arrow_table(&table);
+  write_table_to_bufferlist(table, in);
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "write", in, out));
+
+  // READ PATH
+  librados::bufferlist in_, out_;
+  auto filter = arrow::dataset::scalar(true);
+  auto schema = arrow::schema({
+      arrow::field("id", arrow::int32()),
+      arrow::field("cost_components", arrow::list(arrow::float64()))});
+  
+  auto table_projected = table->RemoveColumn(1).ValueOrDie();
+  serialize_scan_request_to_bufferlist(filter, schema, in_);
+  ASSERT_EQ(0, ioctx.exec("test_object", "arrow", "read", in_, out_));
+  std::shared_ptr<arrow::Table> table_;
+  read_table_from_bufferlist(&table_, out_);
+  
+  ASSERT_EQ(table->Equals(*table_), 0);
+  ASSERT_EQ(table_projected->Equals(*table_), 1);
+
   ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }

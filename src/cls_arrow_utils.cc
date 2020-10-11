@@ -1,5 +1,7 @@
 #include "cls_arrow_utils.h"
 
+#include <iostream>
+
 int create_test_arrow_table(std::shared_ptr<arrow::Table> *out_table) {
     
   // create a memory pool
@@ -49,6 +51,7 @@ int create_test_arrow_table(std::shared_ptr<arrow::Table> *out_table) {
   auto schema = std::make_shared<arrow::Schema>(schema_vector);
   *out_table =
       arrow::Table::Make(schema, {id_array, cost_array, cost_components_array});
+
   if (*out_table == nullptr) {
     return -1;
   }
@@ -150,6 +153,14 @@ arrow::Status scan_batches(std::shared_ptr<arrow::Schema> &schema, arrow::Record
   ARROW_ASSIGN_OR_RAISE(auto scanner, builder->Finish());
   ARROW_ASSIGN_OR_RAISE(auto table_, scanner->ToTable());
 
+  *table = table_;
+  return arrow::Status::OK();
+}
+
+arrow::Status read_table_from_bufferlist(std::shared_ptr<arrow::Table> *table, librados::bufferlist &bl) {
+  arrow::io::BufferReader reader((uint8_t*)bl.c_str(), bl.length());
+  ARROW_ASSIGN_OR_RAISE(auto record_batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+  ARROW_ASSIGN_OR_RAISE(auto table_, arrow::Table::FromRecordBatchReader(record_batch_reader.get()));
   *table = table_;
   return arrow::Status::OK();
 }
