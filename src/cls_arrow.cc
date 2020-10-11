@@ -59,12 +59,11 @@ static int read(cls_method_context_t hctx, ceph::buffer::list *in, ceph::buffer:
   }
 
   std::shared_ptr<arrow::Table> result_table;
-  arrow_ret = scan_batches(schema, batches, &result_table);
+  arrow_ret = scan_batches(filter, schema, batches, &result_table);
   if (!arrow_ret.ok()) {
     CLS_ERR("ERROR: Failed to scan arrow::RecordBatchVector");
     return -1;
   }
-
   ceph::buffer::list result_bl;
   arrow_ret = write_table_to_bufferlist(result_table, result_bl);
   if (!arrow_ret.ok()) {

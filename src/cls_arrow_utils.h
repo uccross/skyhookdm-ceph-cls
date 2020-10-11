@@ -13,4 +13,4 @@ arrow::Status serialize_scan_request_to_bufferlist(std::shared_ptr<arrow::datase
 arrow::Status extract_batches_from_bufferlist(arrow::RecordBatchVector *batches, ceph::buffer::list &bl);
 arrow::Status write_table_to_bufferlist(std::shared_ptr<arrow::Table> &table, ceph::buffer::list &bl);
 arrow::Status read_table_from_bufferlist(std::shared_ptr<arrow::Table> *table, librados::bufferlist &bl);
-arrow::Status scan_batches(std::shared_ptr<arrow::Schema> &schema, arrow::RecordBatchVector &batches, std::shared_ptr<arrow::Table> *table);
+arrow::Status scan_batches(std::shared_ptr<arrow::dataset::Expression> &filter, std::shared_ptr<arrow::Schema> &schema, arrow::RecordBatchVector &batches, std::shared_ptr<arrow::Table> *table);
