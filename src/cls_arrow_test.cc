@@ -100,3 +100,22 @@ TEST(ClsSDK, TestSelection) {
   ASSERT_EQ(table_->num_rows(), 2);
   ASSERT_EQ(0, destroy_one_pool_pp(pool_name, cluster));
 }
+
+TEST(ClsSDK, TestWriteObjects) {
+  librados::Rados cluster;
+  std::string pool_name = "test-pool";
+  create_one_pool_pp(pool_name, cluster);
+  librados::IoCtx ioctx;
+  cluster.ioctx_create(pool_name.c_str(), ioctx);
+  
+  // create and write table 
+  librados::bufferlist in, out;
+  std::shared_ptr<arrow::Table> table;
+  create_test_arrow_table(&table);
+  write_table_to_bufferlist(table, in);
+
+  for (int i = 0; i < 4; i++) {
+    std::string obj_id = "obj." + std::to_string(i);
+    ASSERT_EQ(0, ioctx.exec(obj_id, "arrow", "write", in, out));
+  }
+}
