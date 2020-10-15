@@ -148,8 +148,10 @@ arrow::Status write_table_to_bufferlist(std::shared_ptr<arrow::Table> &table, ce
 arrow::Status scan_batches(std::shared_ptr<arrow::dataset::Expression> &filter, std::shared_ptr<arrow::Schema> &schema, arrow::RecordBatchVector &batches, std::shared_ptr<arrow::Table> *table) {
   std::shared_ptr<arrow::dataset::ScanContext> scan_context = std::make_shared<arrow::dataset::ScanContext>();
   std::shared_ptr<arrow::dataset::InMemoryFragment> fragment = std::make_shared<arrow::dataset::InMemoryFragment>(batches);
-  std::shared_ptr<arrow::dataset::ScannerBuilder> builder = std::make_shared<arrow::dataset::ScannerBuilder>(schema, fragment, scan_context);
+  auto batch_schema = batches[0]->schema();
+  std::shared_ptr<arrow::dataset::ScannerBuilder> builder = std::make_shared<arrow::dataset::ScannerBuilder>(batch_schema, fragment, scan_context);
   ARROW_RETURN_NOT_OK(builder->Filter(filter));
+  ARROW_RETURN_NOT_OK(builder->Project(schema->field_names()));
   ARROW_ASSIGN_OR_RAISE(auto scanner, builder->Finish());
   ARROW_ASSIGN_OR_RAISE(auto table_, scanner->ToTable());
 
