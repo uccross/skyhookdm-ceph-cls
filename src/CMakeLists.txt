@@ -1,27 +1,30 @@
 set(cls_dir ${CMAKE_INSTALL_LIBDIR}/rados-classes)
 
-# cls_sdk
-add_library(cls_cls_sdk SHARED cls_sdk.cc arrow_utils.cc)
-set_target_properties(cls_cls_sdk PROPERTIES
+# cls_arrow
+add_library(cls_arrow SHARED cls_arrow.cc cls_arrow_utils.cc)
+set_target_properties(cls_arrow PROPERTIES
         VERSION "1.0.0"
         SOVERSION "1"
         INSTALL_RPATH ""
         CXX_VISIBILITY_PRESET hidden
         )
-target_link_libraries(cls_cls_sdk
+target_link_libraries(cls_arrow
         arrow
         arrow_dataset
         )
 
-install(TARGETS cls_cls_sdk DESTINATION ${cls_dir})
+install(TARGETS cls_arrow DESTINATION ${cls_dir})
 
-# cls_sdk_test
-add_executable(cls_sdk_test
-        cls_sdk_test.cc
+# cls_arrow_test
+add_executable(cls_arrow_test
+        cls_arrow_test.cc
         test_utils.cc
+        cls_arrow_utils.cc
         )
 
-target_link_libraries(cls_sdk_test
+target_link_libraries(cls_arrow_test
+        arrow
+        arrow_dataset
         ${LIBRADOS_LIBRARIES}
         ${GTEST_MAIN_LIBRARIES}
         ${GTEST_INCLUDE_DIRS}
@@ -29,7 +32,7 @@ target_link_libraries(cls_sdk_test
         )
 
 install(TARGETS
-        cls_sdk_test
+        cls_arrow_test
         RUNTIME DESTINATION bin
         DESTINATION ${CMAKE_INSTALL_BINDIR}
         )

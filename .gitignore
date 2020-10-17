@@ -68,3 +68,5 @@ GTAGS
 \#*\#
 
 skyhookdm-ceph/
+test-cluster/
+.vscode/
