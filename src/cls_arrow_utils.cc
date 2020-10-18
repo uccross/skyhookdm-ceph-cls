@@ -103,10 +103,7 @@ arrow::Status deserialize_scan_request_from_bufferlist(std::shared_ptr<arrow::da
 arrow::Status serialize_scan_request_to_bufferlist(std::shared_ptr<arrow::dataset::Expression> filter, std::shared_ptr<arrow::Schema> schema, librados::bufferlist &bl) {
   ARROW_ASSIGN_OR_RAISE(auto filter_buffer, filter->Serialize());
 
-  arrow::MemoryPool *pool = arrow::default_memory_pool();
-  arrow::ipc::DictionaryMemo memo;
-
-  ARROW_ASSIGN_OR_RAISE(auto schema_buffer, arrow::ipc::SerializeSchema(*schema, &memo, pool));
+  ARROW_ASSIGN_OR_RAISE(auto schema_buffer, arrow::ipc::SerializeSchema(*schema));
 
   char *filter_size_buffer = new char[8];
   ARROW_RETURN_NOT_OK(int64_to_char((uint8_t*)filter_size_buffer, filter_buffer->size()));
@@ -135,7 +132,7 @@ arrow::Status extract_batches_from_bufferlist(arrow::RecordBatchVector *batches,
 arrow::Status write_table_to_bufferlist(std::shared_ptr<arrow::Table> &table, ceph::buffer::list &bl) {
   ARROW_ASSIGN_OR_RAISE(auto buffer_output_stream, arrow::io::BufferOutputStream::Create());
   const auto options = arrow::ipc::IpcWriteOptions::Defaults();
-  ARROW_ASSIGN_OR_RAISE(auto writer, arrow::ipc::NewStreamWriter(buffer_output_stream.get(), table->schema(), options));
+  ARROW_ASSIGN_OR_RAISE(auto writer, arrow::ipc::MakeStreamWriter(buffer_output_stream, table->schema(), options));
 
   writer->WriteTable(*table);
   writer->Close();

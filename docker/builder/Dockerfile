@@ -1,11 +1,14 @@
 ARG CEPH_RELEASE=v15.2.4
 FROM ceph/ceph:${CEPH_RELEASE}
 
-ARG ARROW_RPM_REPO_URL="https://apache.bintray.com/arrow/centos/8/apache-arrow-release-latest.rpm"
 
 RUN dnf group install -y 'Development Tools' && \
-    dnf install -y cmake rados-objclass-devel && \
-    dnf install -y ${ARROW_RPM_REPO_URL} && \
-    dnf install -y --enablerepo=epel --enablerepo=PowerTools \
-       arrow-dataset-devel-1.0.1-1.el8 gtest-devel && \
+    dnf install -y cmake rados-objclass-devel git && \
+    dnf install -y --enablerepo=epel --enablerepo=PowerTools gtest-devel && \
     dnf clean all
+
+RUN git clone https://github.com/apache/arrow && \
+    cd arrow/cpp && \
+    mkdir -p debug && cd debug && \
+    cmake -DCMAKE_BUILD_TYPE=Debug -DARROW_BUILD_TESTS=ON -DARROW_CSV=ON -DARROW_DATASET=ON .. && \
+    make -j8 install

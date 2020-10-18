@@ -1,6 +1,16 @@
 steps:
+- id: build-img
+  uses: docker://docker:19.03.10
+  args:
+  - build
+  -   --build-arg=CEPH_RELEASE=v15.2.4
+  -   --tag=jcnitdgp25/cls-builder:v15.2.4
+  -   --file=docker/builder/Dockerfile
+  -   .
+
 - id: build
-  uses: ./docker/builder
+  skip_pull: true
+  uses: docker://jcnitdgp25/cls-builder:v15.2.4
   runs: [bash, -euxc]
   args:
   - |
@@ -10,8 +20,11 @@ steps:
     make VERBOSE=1
 
 - id: test
-  uses: ./docker/builder
+  skip_pull: true
+  uses: docker://jcnitdgp25/cls-builder:v15.2.4
   runs: [bash, -euxc]
+  env:
+    LD_LIBRARY_PATH: /usr/local/lib64
   args:
   - |
     cp build/lib/libcls_arrow.so* /usr/lib64/rados-classes/
