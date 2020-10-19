@@ -64,7 +64,7 @@ arrow::Status int64_to_char(uint8_t *num_buffer, int64_t num) {
   return arrow::Status::OK();
 }
 
-arrow::Status char_to_int64(uint8_t *num_buffer, int64_t &num) {
+arrow::Status char_to_int64(uint8_t num_buffer[8], int64_t &num) {
   arrow::BasicDecimal128 basic_decimal(num_buffer);
   arrow::Decimal128 decimal(basic_decimal);
   num = (int64_t)decimal;
