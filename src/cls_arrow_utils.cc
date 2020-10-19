@@ -73,7 +73,7 @@ arrow::Status char_to_int64(uint8_t num_buffer[8], int64_t &num) {
 
 arrow::Status deserialize_scan_request_from_bufferlist(std::shared_ptr<arrow::dataset::Expression> *filter, std::shared_ptr<arrow::Schema> *schema, librados::bufferlist bl) {
   int64_t filter_size = 0;
-  char *filter_size_buffer = new char[8];
+  char filter_size_buffer[8];
   bl.begin(0).copy(8, filter_size_buffer);
   ARROW_RETURN_NOT_OK(char_to_int64((uint8_t*)filter_size_buffer, filter_size));
 
@@ -81,7 +81,7 @@ arrow::Status deserialize_scan_request_from_bufferlist(std::shared_ptr<arrow::da
   bl.begin(8).copy(filter_size, filter_buffer);
 
   int64_t schema_size = 0;
-  char *schema_size_buffer = new char[8];
+  char schema_size_buffer[8];
   bl.begin(8 + filter_size).copy(8, schema_size_buffer);
   ARROW_RETURN_NOT_OK(char_to_int64((uint8_t*)schema_size_buffer, schema_size));
 
